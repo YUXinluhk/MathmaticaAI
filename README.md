@@ -36,6 +36,21 @@ MathmaticaAI 是一个创新的全栈 Web 应用，旨在通过 AI 驱动的迭�
     *   **库**: `MathJax` (用于实时渲染 LaTeX 公式), `JSZip` (用于打包下载结果)。
 *   **通信**: 前后端通过 `REST API` 进行异步通信，并已解决 `CORS` 跨域问题。
 
+## ⚙️ 环境配置
+
+在启动后端服务之前，您需要配置必要的环境变量。
+
+1.  进入 `backend` 目录。
+2.  将 ` .env.example` 文件复制一份并重命名为 `.env`。
+3.  编辑 `.env` 文件，填入您自己的 API 密钥。
+
+```
+# .env file content
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY
+DEEPSEEK_API_KEY=YOUR_DEEPSEEK_API_KEY
+```
+
 ## 启动方式
 
 1.  **启动后端服务 (端口 8000)**:
