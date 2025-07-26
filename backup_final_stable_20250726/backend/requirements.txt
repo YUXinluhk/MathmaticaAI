@@ -1,9 +1,0 @@
-fastapi
-uvicorn[standard]
-python-dotenv
-requests
-numpy
-sympy
-scipy
-matplotlib
-google-generativeai
