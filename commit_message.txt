@@ -1,1 +1,1 @@
-Chore: Remove unnecessary files and directories
+Chore: Remove MCP-related files and directories
