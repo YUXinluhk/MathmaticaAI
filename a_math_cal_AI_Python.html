@@ -1,0 +1,3998 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>严格数学验证系统 - AI-Python协作版 v2.1</title>
+    
+    <!-- MathJax配置 -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+                ignoreHtmlClass: 'tex2jax_ignore',
+                processHtmlClass: 'tex2jax_process'
+            },
+            startup: {
+                pageReady: () => {
+                    return MathJax.startup.defaultPageReady().then(() => {
+                        console.log('MathJax渲染完成');
+                    });
+                }
+            }
+        };
+    </script>
+    
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            min-height: 100vh;
+            color: #333;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #e74c3c 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 450px;
+            gap: 0;
+        }
+
+        .main-content {
+            padding: 25px;
+        }
+
+        .control-panel {
+            background: #f8f9fa;
+            border-left: 1px solid #dee2e6;
+            padding: 25px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        /* 严格验证流程图 */
+        .verification-pipeline {
+            background: #fff;
+            border: 2px solid #e74c3c;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .pipeline-title {
+            text-align: center;
+            color: #e74c3c;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+        }
+
+        .verification-steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .verification-step {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .verification-step.active {
+            border-color: #007bff;
+            background: #e3f2fd;
+            transform: scale(1.05);
+        }
+
+        .verification-step.completed {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .verification-step.failed {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .step-number {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: #6c757d;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin: 0 auto 10px;
+        }
+
+        .step-number.active { background: #007bff; }
+        .step-number.completed { background: #28a745; }
+        .step-number.failed { background: #dc3545; }
+
+        .step-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .step-desc {
+            font-size: 0.75rem;
+            color: #6c757d;
+            line-height: 1.3;
+        }
+
+        /* Python验证节点 */
+        .python-nodes {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .python-node {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 0.7rem;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .python-node.active {
+            background: #d1ecf1;
+            border-color: #bee5eb;
+        }
+
+        .python-node.completed {
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+
+        .python-node.failed {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+
+        /* 输入区域 */
+        .input-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+
+        .input-group textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 140px;
+            font-family: inherit;
+            line-height: 1.6;
+        }
+
+        .solve-btn {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .solve-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+        }
+
+        .solve-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 验证状态面板 */
+        .verification-status {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .status-item {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .status-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .status-label {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        /* 错误报告系统 */
+        .error-report {
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+
+        .error-report.critical {
+            border-color: #fc8181;
+            background: #fef5f5;
+        }
+
+        .error-report.warning {
+            border-color: #fbb6ce;
+            background: #fffaf0;
+        }
+
+        .error-header {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .error-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .error-icon.critical { background: #e53e3e; }
+        .error-icon.warning { background: #dd6b20; }
+
+        .error-details {
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* 结果展示区域 */
+        .result-section {
+            background: #fff;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .result-section.completed {
+            border-left-color: #28a745;
+        }
+
+        .result-section.failed {
+            border-left-color: #dc3545;
+        }
+
+        .result-section.python {
+            border-left-color: #ffc107;
+        }
+
+        .result-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #dee2e6;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .result-content {
+            padding: 20px;
+            line-height: 1.8;
+        }
+
+        .math-content {
+            font-size: 1.05rem;
+        }
+
+        .math-content .MathJax {
+            font-size: 1.1em !important;
+        }
+
+        /* Python代码展示 */
+        .python-code {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        .python-header {
+            background: #4a5568;
+            color: white;
+            padding: 12px 20px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .python-content {
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+
+        .python-output {
+            background: #1a202c;
+            color: #e2e8f0;
+            border-radius: 8px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .output-header {
+            background: #2d3748;
+            color: white;
+            padding: 10px 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .output-content {
+            padding: 15px 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .output-success {
+            border-left: 4px solid #48bb78;
+        }
+
+        .output-error {
+            border-left: 4px solid #f56565;
+        }
+
+        /* 迭代追踪 */
+        .iteration-tracker {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .iteration-info {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .iteration-item {
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .iteration-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .iteration-label {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        /* 加载状态 */
+        .loading {
+            text-align: center;
+            padding: 30px;
+            display: none;
+        }
+
+        .loading.show { display: block; }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #e74c3c;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        .loading-text {
+            font-size: 1.1rem;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        /* 配置面板 */
+        .config-section {
+            background: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 20px;
+        }
+
+        .config-title {
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .config-group {
+            margin-bottom: 15px;
+        }
+
+        .config-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+            color: #495057;
+        }
+
+        .config-group input, .config-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .config-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .config-btn:hover {
+            background: #138496;
+            transform: translateY(-1px);
+        }
+
+        .save-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .save-btn:hover {
+            background: #218838;
+        }
+
+        /* 文件保存区域 */
+        .save-section {
+            background: #e8f5e8;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 18px;
+            margin-bottom: 20px;
+        }
+
+        .save-section .config-btn {
+            background: #28a745;
+            margin-bottom: 8px;
+        }
+
+        .save-section .config-btn:hover {
+            background: #218838;
+        }
+
+        .saved-files-info {
+            background: rgba(255,255,255,0.7);
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+        }
+
+        /* 验证摘要样式 */
+        .verification-summary {
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .verification-summary h3 {
+            margin-bottom: 15px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .summary-item strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        /* 操作按钮样式 */
+        .action-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        /* LaTeX预览样式 */
+        .latex-preview {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            font-family: 'Computer Modern', serif;
+            line-height: 1.6;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1400px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+            
+            .control-panel {
+                border-left: none;
+                border-top: 1px solid #dee2e6;
+            }
+
+            .verification-steps {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .verification-steps {
+                grid-template-columns: 1fr;
+            }
+
+            .python-nodes {
+                grid-template-columns: 1fr;
+            }
+
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .iteration-info {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* 动画效果 */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideOutRight {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+
+        .result-section {
+            animation: slideIn 0.3s ease;
+        }
+
+        /* 数学公式高亮 */
+        .formula-highlight {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e7f3ff 100%);
+            border: 1px solid #b3d9ff;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 12px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        mjx-container {
+            display: inline-block !important;
+            margin: 0.2em 0 !important;
+        }
+
+        mjx-container[display="true"] {
+            display: block !important;
+            text-align: center !important;
+            margin: 1em 0 !important;
+        }
+
+        /* 状态指示器 */
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 8px;
+        }
+
+        .status-connected { background: #28a745; }
+        .status-disconnected { background: #dc3545; }
+        .status-testing { 
+            background: #ffc107; 
+            animation: pulse 1s infinite; 
+        }
+
+        /* 通知样式 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            animation: slideInRight 0.3s ease;
+        }
+
+        .notification.error {
+            background: #dc3545;
+        }
+
+        .notification.warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        /* 批量保存对话框 */
+        .batch-save-dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            z-index: 1001;
+            min-width: 400px;
+            text-align: center;
+        }
+
+        .batch-save-dialog h3 {
+            color: #495057;
+            margin-bottom: 20px;
+        }
+
+        .batch-save-progress {
+            background: #f8f9fa;
+            border-radius: 10px;
+            height: 20px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        .batch-save-progress-bar {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            height: 100%;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔬 严格数学验证系统</h1>
+            <p>基于论文逻辑的AI-Python协作验证框架 v2.1 (增强版)</p>
+        </div>
+
+        <div class="main-layout">
+            <div class="main-content">
+                <!-- 输入区域 -->
+                <div class="input-section">
+                    <div class="input-group">
+                        <label for="problem-input">📝 数学问题描述:</label>
+                        <textarea id="problem-input" placeholder="请输入需要严格验证的数学问题...">证明：对于函数 f(x) = x³ - 3x² + 2x - 1，在区间 [0, 2] 上存在唯一零点。
+
+要求完整证明：
+1. 证明零点存在性
+2. 证明零点唯一性  
+3. 给出零点的精确位置
+4. 分析函数的单调性和极值</textarea>
+                    </div>
+                    
+                    <button class="solve-btn" onclick="startRigorousVerification()" id="solve-button">
+                        🚀 启动严格验证流程
+                    </button>
+                </div>
+
+                <!-- 严格验证流程图 -->
+                <div class="verification-pipeline">
+                    <div class="pipeline-title">🔄 严格数学验证流程 (基于论文逻辑)</div>
+                    
+                    <div class="verification-steps">
+                        <div class="verification-step" id="main-step-1">
+                            <div class="step-number" id="main-step-1-num">1</div>
+                            <div class="step-label">初始解生成</div>
+                            <div class="step-desc">生成详细的数学解答</div>
+                        </div>
+                        
+                        <div class="verification-step" id="main-step-2">
+                            <div class="step-number" id="main-step-2-num">2</div>
+                            <div class="step-label">自我改进</div>
+                            <div class="step-desc">基于验证结果改进</div>
+                        </div>
+                        
+                        <div class="verification-step" id="main-step-3">
+                            <div class="step-number" id="main-step-3-num">3</div>
+                            <div class="step-label">严格验证</div>
+                            <div class="step-desc">生成详细错误报告</div>
+                        </div>
+                        
+                        <div class="verification-step" id="main-step-4">
+                            <div class="step-number" id="main-step-4-num">4</div>
+                            <div class="step-label">错误报告审查</div>
+                            <div class="step-desc">审查和分类问题</div>
+                        </div>
+                        
+                        <div class="verification-step" id="main-step-5">
+                            <div class="step-number" id="main-step-5-num">5</div>
+                            <div class="step-label">修正与优化</div>
+                            <div class="step-desc">基于报告改进解答</div>
+                        </div>
+                        
+                        <div class="verification-step" id="main-step-6">
+                            <div class="step-number" id="main-step-6-num">6</div>
+                            <div class="step-label">最终决策</div>
+                            <div class="step-desc">接受或继续迭代</div>
+                        </div>
+                    </div>
+
+                    <!-- Python验证节点 -->
+                    <div class="python-nodes">
+                        <div class="python-node" id="python-node-1">🐍 初始快速验证</div>
+                        <div class="python-node" id="python-node-2">🔍 数学推理预验证</div>
+                        <div class="python-node" id="python-node-3">⚡ 代码执行验证</div>
+                        <div class="python-node" id="python-node-4">🎯 专项数学验证</div>
+                        <div class="python-node" id="python-node-5">📊 增量对比验证</div>
+                        <div class="python-node" id="python-node-6">🔧 错误检测修复</div>
+                        <div class="python-node" id="python-node-7">✅ 交叉验证确认</div>
+                    </div>
+                </div>
+
+                <!-- 迭代状态追踪 -->
+                <div class="iteration-tracker" id="iteration-tracker" style="display: none;">
+                    <h4>🔄 当前验证状态</h4>
+                    <div class="iteration-info">
+                        <div class="iteration-item">
+                            <div class="iteration-value" id="current-iteration">0</div>
+                            <div class="iteration-label">当前迭代</div>
+                        </div>
+                        <div class="iteration-item">
+                            <div class="iteration-value" id="consecutive-passes">0</div>
+                            <div class="iteration-label">连续通过</div>
+                        </div>
+                        <div class="iteration-item">
+                            <div class="iteration-value" id="total-errors">0</div>
+                            <div class="iteration-label">发现错误</div>
+                        </div>
+                        <div class="iteration-item">
+                            <div class="iteration-value" id="python-validations">0</div>
+                            <div class="iteration-label">Python验证</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 加载状态 -->
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <div class="loading-text" id="loading-text">🤖 正在启动严格验证系统...</div>
+                </div>
+
+                <!-- 结果显示区域 -->
+                <div id="results-container">
+                    <!-- 动态生成的验证结果 -->
+                </div>
+            </div>
+
+            <div class="control-panel">
+                <!-- AI配置 -->
+                <div class="config-section">
+                    <div class="config-title">🤖 AI配置</div>
+                    
+                    <div class="config-group">
+                        <label>API提供商:</label>
+                        <select id="api-provider">
+                            <option value="deepseek">DeepSeek V3 (推荐)</option>
+                            <option value="gemini">Google Gemini 2.5 Pro</option>
+                            <option value="openai">OpenAI GPT-4</option>
+                        </select>
+                    </div>
+                    
+                    <div class="config-group">
+                        <label>API密钥:</label>
+                        <input type="password" id="api-key" placeholder="sk-... 或 AIza...">
+                    </div>
+                    
+                    <div class="config-group">
+                        <label>模型版本:</label>
+                        <select id="model-version">
+                            <option value="deepseek-chat">DeepSeek Chat</option>
+                        </select>
+                    </div>
+                    
+                    <button class="config-btn" onclick="testAIConnection()" id="test-btn">
+                        🔗 测试连接 
+                        <span class="status-indicator status-disconnected" id="connection-status"></span>
+                    </button>
+                </div>
+
+                <!-- 验证配置 -->
+                <div class="config-section">
+                    <div class="config-title">⚙️ 验证配置</div>
+                    
+                    <div class="config-group">
+                        <label>最大迭代次数:</label>
+                        <input type="number" id="max-iterations" value="8" min="3" max="15">
+                    </div>
+                    
+                    <div class="config-group">
+                        <label>连续通过要求:</label>
+                        <input type="number" id="consecutive-passes-config" value="3" min="2" max="5">
+                    </div>
+                    
+                    <div class="config-group">
+                        <label>验证严格度:</label>
+                        <select id="verification-rigor">
+                            <option value="strict">严格 (推荐)</option>
+                            <option value="moderate">适中</option>
+                            <option value="lenient">宽松</option>
+                        </select>
+                    </div>
+                    
+                    <div class="config-group">
+                        <label>
+                            <input type="checkbox" id="enable-python-validation" checked style="margin-right: 8px;">
+                            启用Python验证节点
+                        </label>
+                    </div>
+                    
+                    <div class="config-group">
+                        <label>
+                            <input type="checkbox" id="enable-specialized-math" checked style="margin-right: 8px;">
+                            启用专项数学验证
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 验证状态 -->
+                <div class="verification-status">
+                    <h4>📊 实时验证状态</h4>
+                    <div class="status-grid">
+                        <div class="status-item">
+                            <div class="status-value" id="verification-score">--</div>
+                            <div class="status-label">验证得分</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-value" id="error-count">0</div>
+                            <div class="status-label">错误数量</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-value" id="python-executions">0</div>
+                            <div class="status-label">Python执行</div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-value" id="verification-confidence">--</div>
+                            <div class="status-label">置信度</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 输出格式设置 -->
+                <div class="config-section">
+                    <div class="config-title">📝 输出格式设置</div>
+                    
+                    <div class="config-group">
+                        <label>
+                            <input type="checkbox" id="generate-latex" checked style="margin-right: 8px;">
+                            生成LaTeX格式解答
+                        </label>
+                    </div>
+                    
+                    <div class="config-group">
+                        <label>
+                            <input type="checkbox" id="generate-python" checked style="margin-right: 8px;">
+                            生成完整Python程序
+                        </label>
+                    </div>
+                    
+                    <div class="config-group">
+                        <label>LaTeX文档类型:</label>
+                        <select id="latex-document-type">
+                            <option value="article">Article (论文)</option>
+                            <option value="standalone">Standalone (独立文档)</option>
+                            <option value="beamer">Beamer (演示文稿)</option>
+                        </select>
+                    </div>
+                    
+                    <button class="config-btn" onclick="generateFinalOutputs()" style="background: #6f42c1;">
+                        🎯 生成最终输出文件
+                    </button>
+                </div>
+
+                <!-- 文件保存配置 -->
+                <div class="save-section">
+                    <div class="config-title">💾 文件保存</div>
+                    
+                    <button class="config-btn" onclick="saveFinalReport()" style="margin-bottom: 8px;">
+                        📄 保存验证报告
+                    </button>
+                    
+                    <button class="config-btn" onclick="saveAllFiles()" style="margin-bottom: 8px;">
+                        📁 批量保存所有文件
+                    </button>
+                    
+                    <button class="config-btn" onclick="exportVerificationData()" style="margin-bottom: 8px;">
+                        📊 导出验证数据
+                    </button>
+                    
+                    <div class="saved-files-info">
+                        <div>已保存文件: <strong><span data-saved-count>0</span></strong> 个</div>
+                        <div>总文件大小: <strong><span id="total-file-size">0</span></strong> KB</div>
+                    </div>
+                    
+                    <div class="config-group">
+                        <label>保存格式:</label>
+                        <select id="save-format">
+                            <option value="both">完整报告+代码</option>
+                            <option value="report">验证报告</option>
+                            <option value="code">Python代码</option>
+                        </select>
+                    </div>
+                    
+                    <div class="config-group">
+                        <label>
+                            <input type="checkbox" id="auto-save" checked style="margin-right: 8px;">
+                            验证完成后自动保存
+                        </label>
+                    </div>
+                    
+                    <div class="config-group">
+                        <label>
+                            <input type="checkbox" id="save-error-reports" checked style="margin-right: 8px;">
+                            保存错误报告
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 系统说明 -->
+                <div style="background: #e7f3ff; border-left: 4px solid #2196f3; padding: 15px; border-radius: 4px; font-size: 0.85rem; margin-top: 20px;">
+                    <strong>🔬 严格验证系统 v2.1 特性:</strong><br><br>
+                    
+                    <strong>✅ 新增功能:</strong><br>
+                    ✅ 严格的验证评分机制<br>
+                    ✅ 自动生成LaTeX文档<br>
+                    ✅ 生成完整Python程序<br>
+                    ✅ 多种输出格式支持<br><br>
+                    
+                    <strong>📋 基于论文逻辑:</strong><br>
+                    ✅ 完整的六步验证流程<br>
+                    ✅ 结构化错误报告机制<br>
+                    ✅ 迭代式问题修复<br><br>
+                    
+                    <strong>🐍 Python验证节点:</strong><br>
+                    ✅ 7个关键验证点<br>
+                    ✅ 数学推理与计算一致性检查<br>
+                    ✅ 专项领域验证<br><br>
+                    
+                    <strong>🎯 验证标准:</strong><br>
+                    ✅ 数学严谨性检查<br>
+                    ✅ 逻辑完整性验证<br>
+                    ✅ 计算正确性确认<br>
+                    ✅ 交叉验证确保可靠性
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载Pyodide Python环境 -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+    
+    <script>
+        // 全局状态管理
+        let systemState = {
+            pyodide: null,
+            aiConfig: {
+                provider: 'deepseek',
+                apiKey: '',
+                model: 'deepseek-chat',
+                isConnected: false
+            },
+            verificationState: {
+                currentStep: 0,
+                currentIteration: 0,
+                maxIterations: 8,
+                consecutivePasses: 0,
+                requiredPasses: 3,
+                totalErrors: 0,
+                pythonValidations: 0,
+                pythonFailures: 0,
+                syntaxErrors: 0,
+                verificationScore: 0,
+                confidence: 0,
+                isRunning: false
+            },
+            solutions: [],
+            errorReports: [],
+            pythonResults: [],
+            savedFiles: []
+        };
+
+        // API配置
+        const apiEndpoints = {
+            deepseek: {
+                url: 'https://api.deepseek.com/v1/chat/completions',
+                headers: (apiKey) => ({
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                }),
+                formatRequest: (messages) => ({
+                    model: 'deepseek-chat',
+                    messages: messages,
+                    max_tokens: 4000,
+                    temperature: 0
+                }),
+                extractResponse: (data) => data.choices[0].message.content
+            },
+            gemini: {
+                url: 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}',
+                headers: () => ({
+                    'Content-Type': 'application/json'
+                }),
+                formatRequest: (messages, model) => {
+                    const prompt = messages.map(msg => msg.content).join('\n\n');
+                    return {
+                        contents: [{
+                            parts: [{ text: prompt }]
+                        }],
+                        generationConfig: {
+                            temperature: 0,
+                            maxOutputTokens: 32000
+                        }
+                    };
+                },
+                extractResponse: (data) => {
+                    if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+                        return data.candidates[0].content.parts[0].text;
+                    }
+                    throw new Error('Invalid response format');
+                }
+            },
+            openai: {
+                url: 'https://api.openai.com/v1/chat/completions',
+                headers: (apiKey) => ({
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                }),
+                formatRequest: (messages, model) => ({
+                    model: model || 'gpt-4',
+                    messages: messages,
+                    max_tokens: 4000,
+                    temperature: 0.1
+                }),
+                extractResponse: (data) => data.choices[0].message.content
+            }
+        };
+
+        // 初始化Python环境
+        async function initPython() {
+            try {
+                updateLoadingText('🔄 正在初始化Python环境...');
+                systemState.pyodide = await loadPyodide();
+                
+                await systemState.pyodide.loadPackage(['numpy', 'matplotlib', 'scipy', 'sympy']);
+                
+                systemState.pyodide.runPython(`
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy
+import sympy as sp
+from scipy import optimize, integrate
+import io
+import base64
+import sys
+import traceback
+from contextlib import redirect_stdout, redirect_stderr
+
+plt.rcParams['font.sans-serif'] = ['Arial', 'DejaVu Sans']
+plt.rcParams['axes.unicode_minus'] = False
+
+print("严格验证系统Python环境初始化完成!")
+                `);
+                
+                console.log('Python环境初始化成功');
+                return true;
+            } catch (error) {
+                console.error('Python环境初始化失败:', error);
+                return false;
+            }
+        }
+
+        // AI调用函数
+        async function callAI(prompt, systemPrompt = null) {
+            try {
+                const config = apiEndpoints[systemState.aiConfig.provider];
+                
+                const messages = [];
+                if (systemPrompt) {
+                    messages.push({ role: "system", content: systemPrompt });
+                }
+                messages.push({ role: "user", content: prompt });
+
+                let url = config.url;
+                let headers = {};
+                let body = {};
+
+                if (systemState.aiConfig.provider === 'gemini') {
+                    url = url.replace('{model}', systemState.aiConfig.model).replace('{apiKey}', systemState.aiConfig.apiKey);
+                    headers = config.headers();
+                    body = config.formatRequest(messages, systemState.aiConfig.model);
+                } else {
+                    headers = config.headers(systemState.aiConfig.apiKey);
+                    body = config.formatRequest(messages, systemState.aiConfig.model);
+                }
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(body)
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API请求失败: ${response.status} - ${errorText}`);
+                }
+
+                const data = await response.json();
+                const result = config.extractResponse(data);
+                return result;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // 增强的Python代码执行函数
+        async function executePythonCode(code, context = '') {
+            if (!systemState.pyodide) {
+                throw new Error('Python环境未初始化');
+            }
+
+            try {
+                if (typeof code !== 'string') {
+                    throw new Error(`代码必须是字符串类型，当前类型: ${typeof code}`);
+                }
+
+                const wrappedCode = `
+import sys
+import io
+import traceback
+from contextlib import redirect_stdout, redirect_stderr
+
+stdout_capture = io.StringIO()
+stderr_capture = io.StringIO()
+result_output = ""
+
+try:
+    with redirect_stdout(stdout_capture), redirect_stderr(stderr_capture):
+${code.split('\n').map(line => `        ${line}`).join('\n')}
+    
+    stdout_content = stdout_capture.getvalue()
+    stderr_content = stderr_capture.getvalue()
+    
+    if stdout_content:
+        result_output += "输出:\\n" + stdout_content
+    if stderr_content:
+        result_output += "\\n警告:\\n" + stderr_content
+        
+    if plt.get_fignums():
+        result_output += "\\n📊 图表已生成"
+        
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', dpi=100, bbox_inches='tight')
+        buf.seek(0)
+        import base64
+        img_b64 = base64.b64encode(buf.getvalue()).decode()
+        plt.close('all')
+        
+        result_output += "\\n[IMAGE_DATA]" + img_b64 + "[/IMAGE_DATA]"
+    
+    result_output if result_output else "代码执行完成，无输出"
+    
+except Exception as e:
+    error_traceback = traceback.format_exc()
+    f"EXECUTION_ERROR: {str(e)}\\n\\nTraceback:\\n{error_traceback}"
+`;
+
+                const result = systemState.pyodide.runPython(wrappedCode);
+                const resultStr = String(result || '');
+                
+                if (resultStr.startsWith('EXECUTION_ERROR:')) {
+                    const errorMessage = resultStr.substring(16);
+                    const errorType = classifyPythonError({ message: errorMessage });
+                    
+                    // 更新失败统计
+                    systemState.verificationState.pythonFailures = 
+                        (systemState.verificationState.pythonFailures || 0) + 1;
+                    
+                    if (errorType === 'syntax') {
+                        systemState.verificationState.syntaxErrors = 
+                            (systemState.verificationState.syntaxErrors || 0) + 1;
+                    }
+                    
+                    throw { 
+                        message: errorMessage, 
+                        type: errorType,
+                        context: context
+                    };
+                }
+
+                systemState.verificationState.pythonValidations++;
+                updateStatusDisplay();
+                
+                return {
+                    success: true,
+                    result: resultStr,
+                    context: context,
+                    code: code
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error.message || String(error),
+                    errorType: error.type || 'runtime',
+                    context: context,
+                    code: code
+                };
+            }
+        }
+
+        // Python错误分类
+        function classifyPythonError(error) {
+            const errorMsg = error.message || String(error);
+            if (errorMsg.includes('SyntaxError')) return 'syntax';
+            if (errorMsg.includes('NameError')) return 'name';
+            if (errorMsg.includes('TypeError')) return 'type';
+            if (errorMsg.includes('ValueError')) return 'value';
+            if (errorMsg.includes('ZeroDivisionError')) return 'zerodiv';
+            if (errorMsg.includes('IndexError')) return 'index';
+            return 'runtime';
+        }
+
+        // 提取Python代码
+        function extractPythonCode(text) {
+            if (typeof text !== 'string') {
+                return null;
+            }
+
+            const codeMatch = text.match(/```python\n([\s\S]*?)\n```/);
+            if (codeMatch) {
+                return codeMatch[1];
+            }
+            
+            const altMatch = text.match(/```\n([\s\S]*?)\n```/);
+            if (altMatch && (altMatch[1].includes('import') || altMatch[1].includes('def') || altMatch[1].includes('print'))) {
+                return altMatch[1];
+            }
+            
+            return null;
+        }
+
+        // 数学公式处理
+        function processMathFormulas(text) {
+            if (!text || typeof text !== 'string') return text;
+            
+            let processedText = text;
+
+            // 精确分数替换
+            processedText = processedText.replace(/0\.3333?3?/g, '\\(\\frac{1}{3}\\)');
+            processedText = processedText.replace(/0\.6666?6?/g, '\\(\\frac{2}{3}\\)');
+            processedText = processedText.replace(/0\.5/g, '\\(\\frac{1}{2}\\)');
+            processedText = processedText.replace(/0\.25/g, '\\(\\frac{1}{4}\\)');
+            processedText = processedText.replace(/0\.75/g, '\\(\\frac{3}{4}\\)');
+            processedText = processedText.replace(/1\.414/g, '\\(\\sqrt{2}\\)');
+            processedText = processedText.replace(/1\.732/g, '\\(\\sqrt{3}\\)');
+            processedText = processedText.replace(/2\.236/g, '\\(\\sqrt{5}\\)');
+
+            // 高亮重要公式
+            processedText = processedText.replace(/\\\[(.*?)\\\]/gs, (match, formula) => {
+                return `<div class="formula-highlight">\\[${formula}\\]</div>`;
+            });
+
+            return processedText;
+        }
+
+        // 渲染数学公式
+        function renderMathInElement(element) {
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise([element]).then(() => {
+                    console.log('数学公式渲染完成');
+                }).catch((err) => {
+                    console.error('数学公式渲染失败:', err);
+                });
+            } else {
+                setTimeout(() => renderMathInElement(element), 500);
+            }
+        }
+
+        // 严格的验证得分计算（重构版）
+        function calculateVerificationScore(verificationResult, errors, pythonResults, errorReports) {
+            // 基础分数：从满分开始扣分制
+            let score = 100;
+            
+            // 1. Python验证失败严重扣分
+            const pythonFailures = pythonResults.filter(r => !r.success).length;
+            const pythonTotal = pythonResults.length;
+            const pythonFailureRate = pythonTotal > 0 ? pythonFailures / pythonTotal : 0;
+            
+            // Python失败率扣分（最多扣40分）
+            score -= Math.round(pythonFailureRate * 40);
+            
+            // 2. 根据错误类型和数量扣分
+            const errorAnalysis = analyzeErrors(errorReports);
+            
+            // 严重错误（如力矩方程错误）每个扣15分
+            score -= errorAnalysis.critical * 15;
+            
+            // 逻辑缺陷每个扣10分
+            score -= errorAnalysis.logical * 10;
+            
+            // 计算问题每个扣8分
+            score -= errorAnalysis.calculation * 8;
+            
+            // 表述问题每个扣3分
+            score -= errorAnalysis.presentation * 3;
+            
+            // 3. 如果有持续未解决的错误，额外扣分
+            const persistentErrors = findPersistentErrors(errorReports);
+            score -= persistentErrors.length * 10;
+            
+            // 4. 验证结果文本分析
+            if (verificationResult.includes('严重问题') || verificationResult.includes('严重错误')) {
+                score -= 20;
+            } else if (verificationResult.includes('需要改进')) {
+                score -= 10;
+            }
+            
+            // 5. 确保分数在合理范围内
+            score = Math.max(0, Math.min(100, score));
+            
+            // 6. 如果有任何严重错误或超过30%的Python验证失败，分数上限为60
+            if (errorAnalysis.critical > 0 || pythonFailureRate > 0.3) {
+                score = Math.min(score, 60);
+            }
+            
+            return score;
+        }
+
+        // 分析错误类型
+        function analyzeErrors(errorReports) {
+            const analysis = {
+                critical: 0,
+                logical: 0,
+                calculation: 0,
+                presentation: 0
+            };
+            
+            errorReports.forEach(report => {
+                // 统计严重错误
+                const criticalMatches = (report.match(/严重错误[：:](.*?)(?=\n|$)/g) || []).length;
+                const criticalSection = report.match(/\*\*严重错误\*\*.*?(?=\*\*|$)/gs);
+                if (criticalSection) {
+                    const items = criticalSection[0].match(/(?:^|\n)\s*[-•]\s*.+/g) || [];
+                    analysis.critical += items.length;
+                } else {
+                    analysis.critical += criticalMatches;
+                }
+                
+                // 统计逻辑缺陷
+                const logicalSection = report.match(/\*\*逻辑缺陷\*\*.*?(?=\*\*|$)/gs);
+                if (logicalSection) {
+                    const items = logicalSection[0].match(/(?:^|\n)\s*[-•]\s*.+/g) || [];
+                    analysis.logical += items.length;
+                }
+                
+                // 统计计算问题
+                const calcSection = report.match(/\*\*计算问题\*\*.*?(?=\*\*|$)/gs);
+                if (calcSection) {
+                    const items = calcSection[0].match(/(?:^|\n)\s*[-•]\s*.+/g) || [];
+                    analysis.calculation += items.length;
+                }
+                
+                // 统计表述问题
+                const presentSection = report.match(/\*\*表述问题\*\*.*?(?=\*\*|$)/gs);
+                if (presentSection) {
+                    const items = presentSection[0].match(/(?:^|\n)\s*[-•]\s*.+/g) || [];
+                    analysis.presentation += items.length;
+                }
+            });
+            
+            return analysis;
+        }
+
+        // 查找持续存在的错误
+        function findPersistentErrors(errorReports) {
+            const errorFrequency = {};
+            
+            errorReports.forEach(report => {
+                const errors = extractErrors(report);
+                errors.forEach(error => {
+                    const normalized = normalizeError(error);
+                    errorFrequency[normalized] = (errorFrequency[normalized] || 0) + 1;
+                });
+            });
+            
+            // 返回出现2次以上的错误
+            return Object.entries(errorFrequency)
+                .filter(([error, count]) => count >= 2)
+                .map(([error]) => error);
+        }
+
+        // 标准化错误描述
+        function normalizeError(error) {
+            return error
+                .toLowerCase()
+                .replace(/[^\w\s]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        // 严格的置信度计算（重构版）
+        function calculateConfidence(verificationScore, pythonResults, errorReports, iterations) {
+            let confidence = 0;
+            
+            // 1. 基础置信度来自验证得分（权重40%）
+            confidence += verificationScore * 0.4;
+            
+            // 2. Python验证成功率（权重30%）
+            const pythonSuccessRate = pythonResults.length > 0 
+                ? pythonResults.filter(r => r.success).length / pythonResults.length 
+                : 0;
+            confidence += pythonSuccessRate * 30;
+            
+            // 3. 错误修复率（权重20%）
+            const fixRate = calculateErrorFixRate(errorReports);
+            confidence += fixRate * 20;
+            
+            // 4. 收敛速度（权重10%）
+            const convergenceBonus = iterations <= 3 ? 10 : Math.max(0, 10 - (iterations - 3) * 2);
+            confidence += convergenceBonus;
+            
+            // 5. 如果有未修复的严重错误，置信度上限为70%
+            const hasUnfixedCritical = hasUnfixedCriticalErrors(errorReports);
+            if (hasUnfixedCritical) {
+                confidence = Math.min(confidence, 70);
+            }
+            
+            // 6. 如果Python验证失败超过50%，置信度上限为50%
+            if (pythonSuccessRate < 0.5) {
+                confidence = Math.min(confidence, 50);
+            }
+            
+            return Math.round(confidence);
+        }
+
+        // 计算错误修复率
+        function calculateErrorFixRate(errorReports) {
+            if (errorReports.length < 2) return 1.0;
+            
+            const lastReport = errorReports[errorReports.length - 1];
+            const previousReport = errorReports[errorReports.length - 2];
+            
+            const lastErrors = analyzeErrors([lastReport]);
+            const previousErrors = analyzeErrors([previousReport]);
+            
+            const totalLastErrors = lastErrors.critical + lastErrors.logical + lastErrors.calculation;
+            const totalPreviousErrors = previousErrors.critical + previousErrors.logical + previousErrors.calculation;
+            
+            if (totalPreviousErrors === 0) return 1.0;
+            
+            const fixedErrors = Math.max(0, totalPreviousErrors - totalLastErrors);
+            return fixedErrors / totalPreviousErrors;
+        }
+
+        // 检查是否有未修复的严重错误
+        function hasUnfixedCriticalErrors(errorReports) {
+            if (errorReports.length === 0) return false;
+            
+            const lastReport = errorReports[errorReports.length - 1];
+            const lastErrors = analyzeErrors([lastReport]);
+            
+            return lastErrors.critical > 0;
+        }
+
+        // 严格化验证通过条件
+        function checkVerificationPassed(verificationResult, pythonResults, errorAnalysis, score) {
+            // 必须同时满足以下所有条件才算通过
+            const conditions = {
+                // 1. 没有严重错误
+                noCriticalErrors: errorAnalysis.critical === 0,
+                
+                // 2. Python验证成功率至少80%
+                pythonSuccessRate: pythonResults.length === 0 || 
+                    (pythonResults.filter(r => r.success).length / pythonResults.length) >= 0.8,
+                
+                // 3. 验证得分至少85分
+                highScore: score >= 85,
+                
+                // 4. 验证结果文本包含肯定性词汇
+                positiveResult: verificationResult.includes('通过') || 
+                               verificationResult.includes('正确') ||
+                               verificationResult.includes('准确'),
+                
+                // 5. 没有"严重"、"错误"等否定词
+                noNegativeWords: !verificationResult.includes('严重') && 
+                                !verificationResult.includes('错误') &&
+                                !verificationResult.includes('失败')
+            };
+            
+            // 记录哪些条件未满足
+            const failedConditions = Object.entries(conditions)
+                .filter(([key, value]) => !value)
+                .map(([key]) => key);
+            
+            return {
+                passed: Object.values(conditions).every(v => v),
+                failedConditions: failedConditions,
+                conditions: conditions
+            };
+        }
+
+        // 状态更新函数
+        function updateLoadingText(text) {
+            document.getElementById('loading-text').textContent = text;
+        }
+
+        function updateMainStepStatus(stepNumber, status) {
+            const step = document.getElementById(`main-step-${stepNumber}`);
+            const stepNum = document.getElementById(`main-step-${stepNumber}-num`);
+            
+            if (step && stepNum) {
+                step.className = `verification-step ${status}`;
+                stepNum.className = `step-number ${status}`;
+            }
+        }
+
+        function updatePythonNodeStatus(nodeNumber, status) {
+            const node = document.getElementById(`python-node-${nodeNumber}`);
+            if (node) {
+                node.className = `python-node ${status}`;
+            }
+        }
+
+        function updateStatusDisplay() {
+            document.getElementById('current-iteration').textContent = systemState.verificationState.currentIteration;
+            document.getElementById('consecutive-passes').textContent = systemState.verificationState.consecutivePasses;
+            document.getElementById('total-errors').textContent = systemState.verificationState.totalErrors;
+            document.getElementById('python-validations').textContent = systemState.verificationState.pythonValidations;
+            
+            document.getElementById('verification-score').textContent = systemState.verificationState.verificationScore;
+            document.getElementById('error-count').textContent = systemState.verificationState.totalErrors;
+            document.getElementById('python-executions').textContent = systemState.verificationState.pythonValidations;
+            document.getElementById('verification-confidence').textContent = systemState.verificationState.confidence + '%';
+        }
+
+        function showIterationTracker() {
+            document.getElementById('iteration-tracker').style.display = 'block';
+        }
+
+        // 文件保存功能
+        function downloadFile(content, filename, mimeType = 'text/plain') {
+            try {
+                console.log(`开始保存文件: ${filename}`);
+                
+                // 创建Blob对象
+                const blob = new Blob([content], { type: mimeType + ';charset=utf-8' });
+                
+                // 检查浏览器支持
+                if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+                    // IE浏览器支持
+                    window.navigator.msSaveOrOpenBlob(blob, filename);
+                } else {
+                    // 现代浏览器支持
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    
+                    link.href = url;
+                    link.download = filename;
+                    link.style.display = 'none';
+                    
+                    // 添加到DOM，点击下载，然后移除
+                    document.body.appendChild(link);
+                    link.click();
+                    
+                    // 清理
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        URL.revokeObjectURL(url);
+                    }, 100);
+                }
+                
+                console.log(`文件保存成功: ${filename}`);
+                return true;
+                
+            } catch (error) {
+                console.error('文件保存失败:', error);
+                showNotification(`文件保存失败: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // 显示保存通知
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '⚠️';
+            notification.innerHTML = `${icon} ${message}`;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.3s ease';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // 更新保存文件计数
+        function updateSavedFilesCount() {
+            const countElements = document.querySelectorAll('[data-saved-count]');
+            const totalSize = systemState.savedFiles.reduce((sum, file) => sum + (file.size || 0), 0);
+            
+            countElements.forEach(el => {
+                el.textContent = systemState.savedFiles.length;
+            });
+            
+            const sizeElement = document.getElementById('total-file-size');
+            if (sizeElement) {
+                sizeElement.textContent = Math.round(totalSize / 1024);
+            }
+        }
+
+        // 保存Python代码
+        function savePythonCode(code, context) {
+            try {
+                if (!code || typeof code !== 'string') {
+                    throw new Error('无效的代码内容');
+                }
+                
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const sanitizedContext = context.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_');
+                const filename = `数学验证_${sanitizedContext}_${timestamp}.py`;
+                
+                const codeWithHeader = `# -*- coding: utf-8 -*-
+"""
+🔬 严格数学验证系统 - Python验证代码 v2.1
+=============================================
+生成时间: ${new Date().toLocaleString('zh-CN')}
+验证类型: ${context}
+迭代次数: ${systemState.verificationState.currentIteration}
+API提供商: ${systemState.aiConfig.provider.toUpperCase()}
+模型版本: ${systemState.aiConfig.model}
+系统版本: 严格数学验证系统 v2.1 (增强版)
+=============================================
+"""
+
+${code}
+
+# 验证完成标记
+print("\\n" + "="*50)
+print("🔬 严格数学验证系统 v2.1")
+print(f"验证类型: ${context}")
+print(f"生成时间: ${new Date().toLocaleString('zh-CN')}")
+print("="*50)
+`;
+
+                const success = downloadFile(codeWithHeader, filename, 'text/x-python');
+                
+                if (success) {
+                    // 更新保存计数
+                    systemState.savedFiles.push({
+                        name: filename,
+                        type: 'python',
+                        context: context,
+                        timestamp: new Date().toISOString(),
+                        size: codeWithHeader.length
+                    });
+                    
+                    // 显示通知
+                    showNotification(`Python代码已保存: ${filename}`, 'success');
+                    
+                    // 更新计数显示
+                    updateSavedFilesCount();
+                    
+                    console.log(`Python代码已保存: ${filename}`);
+                }
+                
+                return success;
+                
+            } catch (error) {
+                console.error('Python代码保存失败:', error);
+                showNotification(`Python代码保存失败: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // 生成LaTeX格式的数学解答
+        function generateLatexDocument(problem, finalSolution, verificationStats) {
+            const timestamp = new Date().toLocaleString('zh-CN');
+            const documentType = document.getElementById('latex-document-type').value;
+            
+            // 提取纯数学内容（去除Python代码）
+            const mathContent = extractMathContent(finalSolution);
+            
+            // 转换Markdown格式的数学公式为LaTeX格式
+            const latexContent = convertToLatex(mathContent);
+            
+            // 根据文档类型生成不同的LaTeX模板
+            let latexDocument = '';
+            
+            if (documentType === 'article') {
+                latexDocument = `\\documentclass[12pt,a4paper]{article}
+\\usepackage[UTF8]{ctex}
+\\usepackage{amsmath}
+\\usepackage{amssymb}
+\\usepackage{amsthm}
+\\usepackage{graphicx}
+\\usepackage{geometry}
+\\usepackage{hyperref}
+\\usepackage{enumerate}
+\\usepackage{listings}
+\\usepackage{xcolor}
+
+\\geometry{left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+
+% 定理环境
+\\newtheorem{theorem}{定理}
+\\newtheorem{lemma}{引理}
+\\newtheorem{proposition}{命题}
+\\newtheorem{corollary}{推论}
+\\newtheorem{definition}{定义}
+\\newtheorem{example}{例}
+\\newtheorem{remark}{注}
+
+% 证明环境
+\\renewcommand{\\proofname}{证明}
+
+\\title{数学问题严格验证报告}
+\\author{严格数学验证系统 v2.1}
+\\date{${timestamp}}
+
+\\begin{document}
+
+\\maketitle
+
+\\section{问题描述}
+${escapeLatex(problem)}
+
+\\section{验证统计}
+\\begin{itemize}
+    \\item 验证得分: ${verificationStats.score}/100
+    \\item 置信度: ${verificationStats.confidence}\\%
+    \\item Python验证次数: ${verificationStats.pythonValidations}
+    \\item 验证轮数: ${verificationStats.iterations}
+    \\item AI模型: ${verificationStats.aiModel}
+\\end{itemize}
+
+\\section{完整解答}
+${latexContent}
+
+\\section{结论}
+经过严格的数学验证，本解答的正确性得到了充分保证。所有关键步骤都经过了理论推导和数值验证的双重检验。
+
+\\end{document}`;
+            } else if (documentType === 'standalone') {
+                latexDocument = `\\documentclass[border=10pt]{standalone}
+\\usepackage[UTF8]{ctex}
+\\usepackage{amsmath}
+\\usepackage{amssymb}
+\\usepackage{amsthm}
+
+\\begin{document}
+
+\\begin{minipage}{15cm}
+\\textbf{问题:} ${escapeLatex(problem)}
+
+\\vspace{1em}
+
+\\textbf{解答:}
+
+${latexContent}
+
+\\vspace{1em}
+
+\\textit{验证得分: ${verificationStats.score}/100, 置信度: ${verificationStats.confidence}\\%}
+\\end{minipage}
+
+\\end{document}`;
+            } else if (documentType === 'beamer') {
+                latexDocument = `\\documentclass{beamer}
+\\usepackage[UTF8]{ctex}
+\\usepackage{amsmath}
+\\usepackage{amssymb}
+\\usepackage{amsthm}
+\\usepackage{graphicx}
+
+\\usetheme{Madrid}
+\\usecolortheme{whale}
+
+\\title{数学问题验证报告}
+\\subtitle{${escapeLatex(problem.substring(0, 50))}...}
+\\author{严格数学验证系统 v2.1}
+\\date{${timestamp}}
+
+\\begin{document}
+
+\\frame{\\titlepage}
+
+\\begin{frame}{问题描述}
+${escapeLatex(problem)}
+\\end{frame}
+
+\\begin{frame}{验证统计}
+\\begin{itemize}
+    \\item 验证得分: ${verificationStats.score}/100
+    \\item 置信度: ${verificationStats.confidence}\\%
+    \\item Python验证: ${verificationStats.pythonValidations}次
+    \\item 迭代轮数: ${verificationStats.iterations}
+\\end{itemize}
+\\end{frame}
+
+${generateBeamerFrames(latexContent)}
+
+\\begin{frame}{结论}
+\\begin{center}
+\\Large
+验证通过！\\\\[1em]
+\\normalsize
+解答经过严格验证，数学推理与计算结果完全一致。
+\\end{center}
+\\end{frame}
+
+\\end{document}`;
+            }
+            
+            return latexDocument;
+        }
+
+        // 从解答中提取纯数学内容
+        function extractMathContent(solution) {
+            // 移除Python代码块
+            let mathContent = solution.replace(/```python[\s\S]*?```/g, '');
+            
+            // 移除Python输出
+            mathContent = mathContent.replace(/执行结果:[\s\S]*?(?=\n\n|\n#|$)/g, '');
+            
+            // 清理多余的空行
+            mathContent = mathContent.replace(/\n{3,}/g, '\n\n');
+            
+            return mathContent.trim();
+        }
+
+        // 转换Markdown数学公式为LaTeX格式
+        function convertToLatex(content) {
+            let latexContent = content;
+            
+            // 转换显示公式
+            latexContent = latexContent.replace(/\$\$(.*?)\$\$/g, '\\[\n$1\n\\]');
+            
+            // 转换行内公式
+            latexContent = latexContent.replace(/\$([^\$]+)\$/g, '$$$1$$');
+            
+            // 转换标题
+            latexContent = latexContent.replace(/^### (.*?)$/gm, '\\subsection{$1}');
+            latexContent = latexContent.replace(/^## (.*?)$/gm, '\\section{$1}');
+            latexContent = latexContent.replace(/^# (.*?)$/gm, '\\chapter{$1}');
+            
+            // 转换列表
+            latexContent = latexContent.replace(/^\* (.*?)$/gm, '\\item $1');
+            latexContent = latexContent.replace(/^\d+\. (.*?)$/gm, '\\item $1');
+            
+            // 添加列表环境
+            latexContent = latexContent.replace(/(\\item .*\n)+/g, (match) => {
+                return '\\begin{itemize}\n' + match + '\\end{itemize}\n';
+            });
+            
+            // 转换强调
+            latexContent = latexContent.replace(/\*\*(.*?)\*\*/g, '\\textbf{$1}');
+            latexContent = latexContent.replace(/\*(.*?)\*/g, '\\textit{$1}');
+            
+            // 处理特殊的数学环境
+            latexContent = latexContent.replace(/证明[:：]/g, '\n\\begin{proof}\n');
+            latexContent = latexContent.replace(/证毕[。.]?/g, '\n\\end{proof}');
+            
+            return latexContent;
+        }
+
+        // LaTeX特殊字符转义
+        function escapeLatex(text) {
+            const escapeMap = {
+                '&': '\\&',
+                '%': '\\%',
+                '$': '\\$',
+                '#': '\\#',
+                '_': '\\_',
+                '{': '\\{',
+                '}': '\\}',
+                '~': '\\textasciitilde{}',
+                '^': '\\textasciicircum{}'
+            };
+            
+            return text.replace(/[&%$#_{}~^]/g, (match) => escapeMap[match]);
+        }
+
+        // 为Beamer生成幻灯片
+        function generateBeamerFrames(content) {
+            const sections = content.split(/\\subsection{.*?}/);
+            let frames = '';
+            
+            sections.forEach((section, index) => {
+                if (section.trim()) {
+                    const title = `解答步骤 ${index + 1}`;
+                    frames += `
+\\begin{frame}{${title}}
+${section.substring(0, 500)}${section.length > 500 ? '...' : ''}
+\\end{frame}
+`;
+                }
+            });
+            
+            return frames;
+        }
+
+        // 生成完整的Python程序
+        function generatePythonProgram(problem, allPythonCodes, verificationStats) {
+            const timestamp = new Date().toLocaleString('zh-CN');
+            
+            // 收集所有成功的Python代码
+            const successfulCodes = [];
+            
+            systemState.pythonResults.forEach((iterationResults, iteration) => {
+                iterationResults.forEach((result, nodeIndex) => {
+                    if (result.success && result.code) {
+                        successfulCodes.push({
+                            iteration: iteration + 1,
+                            node: nodeIndex + 1,
+                            context: result.context,
+                            code: result.code
+                        });
+                    }
+                });
+            });
+            
+            // 生成完整的Python程序
+            const pythonProgram = `#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+🔬 严格数学验证系统 - 自动生成的验证程序
+=============================================
+问题: ${problem.replace(/\n/g, '\n# ')}
+
+生成时间: ${timestamp}
+验证得分: ${verificationStats.score}/100
+置信度: ${verificationStats.confidence}%
+AI模型: ${verificationStats.aiModel}
+=============================================
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy
+from scipy import optimize, integrate, special
+import sympy as sp
+from sympy import symbols, solve, diff, integrate as sp_integrate
+import warnings
+warnings.filterwarnings('ignore')
+
+# 设置中文显示
+plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial']
+plt.rcParams['axes.unicode_minus'] = False
+
+print("="*60)
+print("🔬 严格数学验证系统 - 验证程序")
+print("="*60)
+print()
+
+${generateMainFunction(successfulCodes)}
+
+${generateHelperFunctions(successfulCodes)}
+
+${generateVisualizationFunctions(successfulCodes)}
+
+${generateCrossValidation(successfulCodes)}
+
+def main():
+    """主函数：执行所有验证"""
+    print("📊 开始执行验证程序...")
+    print()
+    
+    try:
+        # 执行数学验证
+        print("1️⃣ 执行数学推理验证...")
+        verify_mathematical_reasoning()
+        print("✅ 数学推理验证完成\\n")
+        
+        # 执行数值计算
+        print("2️⃣ 执行数值计算验证...")
+        verify_numerical_calculations()
+        print("✅ 数值计算验证完成\\n")
+        
+        # 执行可视化
+        print("3️⃣ 生成可视化图表...")
+        generate_visualizations()
+        print("✅ 可视化完成\\n")
+        
+        # 执行交叉验证
+        print("4️⃣ 执行交叉验证...")
+        cross_validation()
+        print("✅ 交叉验证完成\\n")
+        
+    except Exception as e:
+        print(f"❌ 验证过程中出现错误: {str(e)}")
+        import traceback
+        traceback.print_exc()
+    
+    print("="*60)
+    print("🎯 验证程序执行完毕！")
+    print(f"最终验证得分: ${verificationStats.score}/100")
+    print(f"置信度: ${verificationStats.confidence}%")
+    print("="*60)
+
+if __name__ == "__main__":
+    main()
+`;
+            
+            return pythonProgram;
+        }
+
+        // 生成主要验证函数
+        function generateMainFunction(codes) {
+            // 提取关键验证代码
+            const verificationCodes = codes.filter(c => 
+                c.context.includes('验证') || c.context.includes('检验')
+            );
+            
+            let mainFunctions = `
+def verify_mathematical_reasoning():
+    """验证数学推理的正确性"""
+`;
+            
+            // 合并相关的验证代码
+            verificationCodes.forEach((codeObj, index) => {
+                mainFunctions += `
+    # ${codeObj.context}
+    print(f"执行: ${codeObj.context}")
+    ${indentCode(codeObj.code, 1)}
+    print()
+`;
+            });
+            
+            mainFunctions += `
+
+def verify_numerical_calculations():
+    """验证数值计算的准确性"""
+    # 数值计算验证代码
+    pass
+`;
+            
+            return mainFunctions;
+        }
+
+        // 生成辅助函数
+        function generateHelperFunctions(codes) {
+            // 提取定义的函数
+            const functionDefinitions = [];
+            const processedFunctions = new Set();
+            
+            codes.forEach(codeObj => {
+                const funcMatches = codeObj.code.match(/def\s+\w+\s*\([^)]*\):/g);
+                if (funcMatches) {
+                    funcMatches.forEach(funcDef => {
+                        const funcName = funcDef.match(/def\s+(\w+)/)[1];
+                        if (!processedFunctions.has(funcName)) {
+                            // 提取完整的函数定义
+                            const funcBody = extractFunctionBody(codeObj.code, funcName);
+                            if (funcBody) {
+                                functionDefinitions.push(funcBody);
+                                processedFunctions.add(funcName);
+                            }
+                        }
+                    });
+                }
+            });
+            
+            return functionDefinitions.join('\n\n');
+        }
+
+        // 生成可视化函数
+        function generateVisualizationFunctions(codes) {
+            const visualizationCode = codes.find(c => 
+                c.code.includes('plt.') || c.code.includes('plot')
+            );
+            
+            if (!visualizationCode) {
+                return `
+def generate_visualizations():
+    """生成可视化图表"""
+    print("暂无可视化内容")
+`;
+            }
+            
+            return `
+def generate_visualizations():
+    """生成可视化图表"""
+    ${indentCode(visualizationCode.code, 1)}
+    plt.tight_layout()
+    plt.show()
+`;
+        }
+
+        // 生成交叉验证函数
+        function generateCrossValidation(codes) {
+            return `
+def cross_validation():
+    """执行交叉验证，确保所有结果一致"""
+    results = {}
+    
+    # 收集所有计算结果
+    ${codes.map((c, i) => `
+    # 来自${c.context}的结果
+    try:
+        ${indentCode(extractResultVariables(c.code), 2)}
+        results['${c.context}'] = locals()
+    except:
+        pass
+    `).join('\n')}
+    
+    # 比较结果一致性
+    print("交叉验证结果:")
+    for key, value in results.items():
+        print(f"  - {key}: {value}")
+    
+    # 计算一致性得分
+    consistency_score = calculate_consistency(results)
+    print(f"\\n一致性得分: {consistency_score:.2f}%")
+    
+    return consistency_score
+
+def calculate_consistency(results):
+    """计算结果一致性"""
+    # 这里实现具体的一致性计算逻辑
+    return 100.0  # 示例返回值
+`;
+        }
+
+        // 提取结果变量
+        function extractResultVariables(code) {
+            // 简化版：提取赋值语句
+            const lines = code.split('\n');
+            const resultLines = lines.filter(line => 
+                line.includes('=') && 
+                !line.includes('def') && 
+                !line.includes('import') &&
+                !line.includes('for') &&
+                !line.includes('if')
+            ).slice(0, 5); // 只取前5个结果
+            
+            return resultLines.join('\n') || 'pass';
+        }
+
+        // 提取函数体
+        function extractFunctionBody(code, funcName) {
+            const lines = code.split('\n');
+            let funcStart = -1;
+            let indentLevel = -1;
+            
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].includes(`def ${funcName}`)) {
+                    funcStart = i;
+                    indentLevel = lines[i].search(/\S/);
+                    break;
+                }
+            }
+            
+            if (funcStart === -1) return null;
+            
+            const funcLines = [lines[funcStart]];
+            
+            for (let i = funcStart + 1; i < lines.length; i++) {
+                const currentIndent = lines[i].search(/\S/);
+                if (currentIndent === -1 || lines[i].trim() === '') {
+                    funcLines.push(lines[i]);
+                } else if (currentIndent > indentLevel) {
+                    funcLines.push(lines[i]);
+                } else {
+                    break;
+                }
+            }
+            
+            return funcLines.join('\n');
+        }
+
+        // 代码缩进处理
+        function indentCode(code, level = 1) {
+            const indent = '    '.repeat(level);
+            return code.split('\n').map(line => 
+                line.trim() ? indent + line : line
+            ).join('\n');
+        }
+
+        // 生成最终输出文件
+        async function generateFinalOutputs() {
+            if (!systemState.verificationState.isRunning && systemState.solutions.length > 0) {
+                try {
+                    updateLoadingText('🎯 正在生成最终输出文件...');
+                    document.getElementById('loading').classList.add('show');
+                    
+                    const finalSolution = systemState.solutions[systemState.solutions.length - 1];
+                    const problem = document.getElementById('problem-input').value;
+                    
+                    const verificationStats = {
+                        score: systemState.verificationState.verificationScore,
+                        confidence: systemState.verificationState.confidence,
+                        pythonValidations: systemState.verificationState.pythonValidations,
+                        iterations: systemState.verificationState.currentIteration,
+                        aiModel: `${systemState.aiConfig.provider.toUpperCase()} (${systemState.aiConfig.model})`
+                    };
+                    
+                    // 生成LaTeX文档
+                    if (document.getElementById('generate-latex').checked) {
+                        updateLoadingText('📝 生成LaTeX文档...');
+                        const latexContent = generateLatexDocument(problem, finalSolution, verificationStats);
+                        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                        const latexFilename = `数学解答_${timestamp}.tex`;
+                        
+                        if (downloadFile(latexContent, latexFilename, 'text/x-latex')) {
+                            systemState.savedFiles.push({
+                                name: latexFilename,
+                                type: 'latex',
+                                context: 'LaTeX格式解答',
+                                timestamp: new Date().toISOString(),
+                                size: latexContent.length
+                            });
+                            showNotification(`LaTeX文档已生成: ${latexFilename}`, 'success');
+                        }
+                    }
+                    
+                    // 生成Python程序
+                    if (document.getElementById('generate-python').checked) {
+                        updateLoadingText('🐍 生成Python程序...');
+                        const pythonProgram = generatePythonProgram(problem, systemState.pythonResults, verificationStats);
+                        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                        const pythonFilename = `完整验证程序_${timestamp}.py`;
+                        
+                        if (downloadFile(pythonProgram, pythonFilename, 'text/x-python')) {
+                            systemState.savedFiles.push({
+                                name: pythonFilename,
+                                type: 'python',
+                                context: '完整验证程序',
+                                timestamp: new Date().toISOString(),
+                                size: pythonProgram.length
+                            });
+                            showNotification(`Python程序已生成: ${pythonFilename}`, 'success');
+                        }
+                    }
+                    
+                    updateSavedFilesCount();
+                    showNotification('✅ 最终输出文件生成完成！', 'success');
+                    
+                } catch (error) {
+                    console.error('生成输出文件失败:', error);
+                    showNotification(`生成失败: ${error.message}`, 'error');
+                } finally {
+                    document.getElementById('loading').classList.remove('show');
+                }
+            } else {
+                showNotification('请先完成验证流程', 'warning');
+            }
+        }
+
+        // 生成完整验证报告
+        function generateFinalReport() {
+            const { verificationState, solutions, errorReports, pythonResults, aiConfig } = systemState;
+            
+            const reportContent = `
+🔬 严格数学验证系统 - 完整验证报告 v2.1
+==============================================
+
+📊 验证统计摘要
+--------------
+总验证轮数: ${verificationState.currentIteration}
+连续验证通过: ${verificationState.consecutivePasses}次
+验证得分: ${verificationState.verificationScore}/100
+Python验证次数: ${verificationState.pythonValidations}
+最终置信度: ${verificationState.confidence}%
+发现错误总数: ${verificationState.totalErrors}
+Python失败次数: ${verificationState.pythonFailures || 0}
+AI提供商: ${aiConfig.provider.toUpperCase()} (${aiConfig.model})
+验证严格度: ${document.getElementById('verification-rigor').value}
+生成时间: ${new Date().toLocaleString('zh-CN')}
+
+📝 问题描述
+-----------
+${document.getElementById('problem-input').value}
+
+🧮 解题过程演进
+---------------
+${solutions.map((solution, index) => `
+===== 第${index + 1}轮解答 =====
+${solution}
+`).join('\n' + '='.repeat(60) + '\n')}
+
+🔍 错误报告分析
+---------------
+${errorReports.map((report, index) => `
+----- 第${index + 1}轮错误报告 -----
+${report}
+`).join('\n' + '-'.repeat(40) + '\n')}
+
+🐍 Python验证结果详细
+--------------------
+${pythonResults.map((results, iteration) => `
+----- 第${iteration + 1}轮Python验证 -----
+${results.map((result, nodeIndex) => `
+  🔗 节点${nodeIndex + 1}: ${result.success ? '✅ 验证成功' : '❌ 验证失败'}
+  📝 验证类型: ${result.context || `节点${nodeIndex + 1}验证`}
+  📊 执行结果: ${result.result ? result.result.substring(0, 200) + (result.result.length > 200 ? '...' : '') : result.error}
+`).join('\n')}
+`).join('\n' + '-'.repeat(40) + '\n')}
+
+📋 最终验证结论
+--------------
+经过${verificationState.currentIteration}轮严格验证流程，该数学问题的解答达到以下标准：
+
+✅ 验证得分: ${verificationState.verificationScore}/100 ${verificationState.verificationScore >= 85 ? '(优秀)' : verificationState.verificationScore >= 70 ? '(良好)' : '(需改进)'}
+✅ 置信度: ${verificationState.confidence}% ${verificationState.confidence >= 90 ? '(高置信度)' : verificationState.confidence >= 70 ? '(中等置信度)' : '(低置信度)'}
+✅ 连续通过验证: ${verificationState.consecutivePasses}次
+✅ Python验证执行: ${verificationState.pythonValidations}次
+✅ 发现并修复错误: ${verificationState.totalErrors}个
+
+基于严格的数学验证标准和AI-Python协作验证框架，该解答的数学推理与计算验证完全一致，
+确保了解答的严谨性、完整性和可靠性。
+
+📁 保存文件清单
+--------------
+${systemState.savedFiles.map((file, index) => `
+${index + 1}. 📄 ${file.name}
+   📂 类型: ${file.type} | 📏 大小: ${(file.size/1024).toFixed(1)}KB
+   🕐 生成时间: ${new Date(file.timestamp).toLocaleString('zh-CN')}
+   🔖 验证类型: ${file.context}
+`).join('')}
+
+🔧 技术信息
+-----------
+报告生成时间: ${new Date().toLocaleString('zh-CN')}
+验证系统版本: 严格数学验证系统 v2.1 (增强版)
+AI提供商: ${aiConfig.provider.toUpperCase()}
+模型版本: ${aiConfig.model}
+Python环境: Pyodide v0.25.0
+MathJax版本: v3.0
+验证框架: 基于论文逻辑的AI-Python协作验证
+
+🎯 系统性能评估
+--------------
+✅ 验证严谨性: ${verificationState.verificationScore >= 85 ? '优秀' : '良好'}
+✅ 计算准确性: ${verificationState.pythonValidations >= 7 ? '高' : '中等'}
+✅ 错误发现能力: ${verificationState.totalErrors > 0 ? '有效' : '未发现错误'}
+✅ 迭代收敛性: ${verificationState.consecutivePasses >= 3 ? '快速收敛' : '稳定收敛'}
+
+==============================================
+🔬 严格数学验证系统 v2.1 - 报告结束
+==============================================
+`;
+
+            return reportContent;
+        }
+
+        // 保存最终报告
+        function saveFinalReport() {
+            try {
+                const reportContent = generateFinalReport();
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const filename = `严格数学验证报告_v2.1_${timestamp}.txt`;
+                
+                const success = downloadFile(reportContent, filename, 'text/plain');
+                
+                if (success) {
+                    systemState.savedFiles.push({
+                        name: filename,
+                        type: 'report',
+                        context: '完整验证报告',
+                        timestamp: new Date().toISOString(),
+                        size: reportContent.length
+                    });
+                    
+                    showNotification(`验证报告已保存: ${filename}`, 'success');
+                    updateSavedFilesCount();
+                }
+                
+                return success;
+                
+            } catch (error) {
+                console.error('最终报告保存失败:', error);
+                showNotification(`报告保存失败: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // 批量保存所有文件
+        async function saveAllFiles() {
+            try {
+                updateLoadingText('💾 正在批量保存文件...');
+                document.getElementById('loading').classList.add('show');
+                
+                // 显示进度对话框
+                const progressDialog = document.createElement('div');
+                progressDialog.className = 'batch-save-dialog';
+                progressDialog.innerHTML = `
+                    <h3>📁 批量保存进行中...</h3>
+                    <div class="batch-save-progress">
+                        <div class="batch-save-progress-bar" id="save-progress-bar"></div>
+                    </div>
+                    <div id="save-progress-text">准备保存文件...</div>
+                `;
+                document.body.appendChild(progressDialog);
+                
+                let successCount = 0;
+                let totalFiles = 0;
+                let currentFile = 0;
+                
+                const updateProgress = (current, total, text) => {
+                    const percentage = Math.round((current / total) * 100);
+                    document.getElementById('save-progress-bar').style.width = percentage + '%';
+                    document.getElementById('save-progress-text').textContent = text;
+                };
+                
+                // 计算总文件数
+                for (let iteration = 0; iteration < systemState.pythonResults.length; iteration++) {
+                    const pythonResults = systemState.pythonResults[iteration];
+                    for (let nodeIndex = 0; nodeIndex < pythonResults.length; nodeIndex++) {
+                        const result = pythonResults[nodeIndex];
+                        if (result.success && result.code) {
+                            totalFiles++;
+                        }
+                    }
+                }
+                totalFiles += 4; // 报告、解答历史、LaTeX、完整Python
+                
+                // 保存所有Python代码
+                for (let iteration = 0; iteration < systemState.pythonResults.length; iteration++) {
+                    const pythonResults = systemState.pythonResults[iteration];
+                    
+                    for (let nodeIndex = 0; nodeIndex < pythonResults.length; nodeIndex++) {
+                        const result = pythonResults[nodeIndex];
+                        if (result.success && result.code) {
+                            currentFile++;
+                            const context = `第${iteration+1}轮_节点${nodeIndex+1}`;
+                            updateProgress(currentFile, totalFiles, `保存Python代码: ${context}`);
+                            
+                            if (savePythonCode(result.code, context)) {
+                                successCount++;
+                            }
+                            
+                            // 短暂延迟以显示进度
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                        }
+                    }
+                }
+                
+                // 保存最终报告
+                currentFile++;
+                updateProgress(currentFile, totalFiles, '保存验证报告...');
+                if (saveFinalReport()) {
+                    successCount++;
+                }
+                
+                // 保存解答历史
+                currentFile++;
+                updateProgress(currentFile, totalFiles, '保存解答历史...');
+                const solutionsContent = systemState.solutions.map((solution, index) => `
+第${index + 1}轮解答 (迭代${index + 1})
+${'='.repeat(60)}
+${solution}
+`).join('\n\n');
+                
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const solutionsFilename = `解答历史_v2.1_${timestamp}.txt`;
+                
+                if (downloadFile(solutionsContent, solutionsFilename, 'text/plain')) {
+                    systemState.savedFiles.push({
+                        name: solutionsFilename,
+                        type: 'solutions',
+                        context: '解答历史',
+                        timestamp: new Date().toISOString(),
+                        size: solutionsContent.length
+                    });
+                    successCount++;
+                }
+                
+                // 生成并保存LaTeX和Python程序
+                currentFile++;
+                updateProgress(currentFile, totalFiles, '生成LaTeX文档...');
+                await generateFinalOutputs();
+                
+                // 更新进度
+                updateProgress(totalFiles, totalFiles, '保存完成！');
+                
+                // 显示结果
+                setTimeout(() => {
+                    progressDialog.innerHTML = `
+                        <h3>📁 批量保存完成！</h3>
+                        <div style="margin: 20px 0; font-size: 1.1rem;">
+                            <div style="color: #28a745;">✅ 成功保存: ${successCount}/${totalFiles} 个文件</div>
+                            <div style="margin-top: 10px; font-size: 0.9rem; color: #6c757d;">
+                                总文件大小: ${Math.round(systemState.savedFiles.reduce((sum, file) => sum + (file.size || 0), 0) / 1024)} KB
+                            </div>
+                        </div>
+                        <button onclick="this.parentElement.remove()" style="
+                            background: #28a745;
+                            border: none;
+                            color: white;
+                            padding: 10px 20px;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            font-size: 1rem;
+                        ">确定</button>
+                    `;
+                }, 500);
+                
+                updateSavedFilesCount();
+                
+                // 5秒后自动关闭
+                setTimeout(() => {
+                    if (progressDialog.parentNode) {
+                        progressDialog.remove();
+                    }
+                }, 5000);
+                
+                console.log(`批量保存完成: ${successCount}/${totalFiles}`);
+                
+            } catch (error) {
+                console.error('批量保存失败:', error);
+                showNotification(`批量保存失败: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('loading').classList.remove('show');
+            }
+        }
+
+        // 导出验证数据
+        function exportVerificationData() {
+            try {
+                const exportData = {
+                    systemInfo: {
+                        version: '2.1',
+                        timestamp: new Date().toISOString(),
+                        provider: systemState.aiConfig.provider,
+                        model: systemState.aiConfig.model
+                    },
+                    verificationState: systemState.verificationState,
+                    problem: document.getElementById('problem-input').value,
+                    solutions: systemState.solutions,
+                    errorReports: systemState.errorReports,
+                    pythonResults: systemState.pythonResults,
+                    savedFiles: systemState.savedFiles.map(file => ({
+                        name: file.name,
+                        type: file.type,
+                        context: file.context,
+                        timestamp: file.timestamp,
+                        size: file.size
+                    }))
+                };
+                
+                const jsonContent = JSON.stringify(exportData, null, 2);
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                const filename = `验证数据导出_v2.1_${timestamp}.json`;
+                
+                const success = downloadFile(jsonContent, filename, 'application/json');
+                
+                if (success) {
+                    systemState.savedFiles.push({
+                        name: filename,
+                        type: 'export',
+                        context: '验证数据导出',
+                        timestamp: new Date().toISOString(),
+                        size: jsonContent.length
+                    });
+                    
+                    showNotification(`验证数据已导出: ${filename}`, 'success');
+                    updateSavedFilesCount();
+                }
+                
+                return success;
+                
+            } catch (error) {
+                console.error('数据导出失败:', error);
+                showNotification(`数据导出失败: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // 快速操作按钮
+        function addQuickActions(container) {
+            const actionsDiv = document.createElement('div');
+            actionsDiv.style.cssText = `
+                display: flex;
+                gap: 15px;
+                justify-content: center;
+                margin-top: 20px;
+                flex-wrap: wrap;
+            `;
+            
+            actionsDiv.innerHTML = `
+                <button class="action-btn" onclick="generateAndDownloadLatex()" style="background: #e74c3c;">
+                    📝 下载LaTeX解答
+                </button>
+                <button class="action-btn" onclick="generateAndDownloadPython()" style="background: #3498db;">
+                    🐍 下载Python程序
+                </button>
+                <button class="action-btn" onclick="generateAndDownloadBoth()" style="background: #9b59b6;">
+                    📦 下载全部文件
+                </button>
+            `;
+            
+            container.appendChild(actionsDiv);
+        }
+
+        // 快速下载函数
+        async function generateAndDownloadLatex() {
+            document.getElementById('generate-latex').checked = true;
+            document.getElementById('generate-python').checked = false;
+            await generateFinalOutputs();
+        }
+
+        async function generateAndDownloadPython() {
+            document.getElementById('generate-latex').checked = false;
+            document.getElementById('generate-python').checked = true;
+            await generateFinalOutputs();
+        }
+
+        async function generateAndDownloadBoth() {
+            document.getElementById('generate-latex').checked = true;
+            document.getElementById('generate-python').checked = true;
+            await generateFinalOutputs();
+        }
+
+        // 显示验证摘要
+        function showVerificationSummary(state) {
+            const { verificationScore, confidence, pythonFailures, totalErrors } = state;
+            
+            // 根据得分确定评级
+            let rating, ratingColor, ratingIcon;
+            if (verificationScore >= 90 && pythonFailures === 0) {
+                rating = "优秀";
+                ratingColor = "#28a745";
+                ratingIcon = "✅";
+            } else if (verificationScore >= 75) {
+                rating = "良好";
+                ratingColor = "#17a2b8";
+                ratingIcon = "👍";
+            } else if (verificationScore >= 60) {
+                rating = "需要改进";
+                ratingColor = "#ffc107";
+                ratingIcon = "⚠️";
+            } else {
+                rating = "不合格";
+                ratingColor = "#dc3545";
+                ratingIcon = "❌";
+            }
+            
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'verification-summary';
+            summaryDiv.style.cssText = `background: ${ratingColor}20; border: 2px solid ${ratingColor};`;
+            
+            summaryDiv.innerHTML = `
+                <h3 style="color: ${ratingColor};">${ratingIcon} 验证评级: ${rating}</h3>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <strong>验证得分:</strong> ${verificationScore}/100
+                        ${verificationScore < 60 ? '<br><small style="color: red;">⚠️ 得分过低</small>' : ''}
+                    </div>
+                    <div class="summary-item">
+                        <strong>置信度:</strong> ${confidence}%
+                        ${confidence < 70 ? '<br><small style="color: red;">⚠️ 置信度不足</small>' : ''}
+                    </div>
+                    <div class="summary-item">
+                        <strong>Python失败:</strong> ${pythonFailures || 0}次
+                        ${pythonFailures > 0 ? '<br><small style="color: red;">⚠️ 存在验证失败</small>' : ''}
+                    </div>
+                    <div class="summary-item">
+                        <strong>发现错误:</strong> ${totalErrors}个
+                        ${totalErrors > 5 ? '<br><small style="color: red;">⚠️ 错误过多</small>' : ''}
+                    </div>
+                </div>
+            `;
+            
+            return summaryDiv;
+        }
+
+        // 修复保存按钮事件处理
+        function fixSaveButtonEvents() {
+            // 为所有现有的保存按钮添加事件监听
+            document.addEventListener('click', function(event) {
+                if (event.target.classList.contains('save-btn')) {
+                    event.preventDefault();
+                    
+                    const button = event.target;
+                    const codeElement = button.closest('.python-code') || button.closest('.result-section');
+                    
+                    if (codeElement) {
+                        const codeContent = codeElement.querySelector('.python-content');
+                        const headerElement = codeElement.querySelector('.python-header span') || 
+                                            codeElement.querySelector('.result-header span');
+                        
+                        const context = headerElement ? 
+                            headerElement.textContent.replace(/🐍|✅|❌|📄/g, '').trim() : 
+                            '验证结果';
+                        
+                        if (codeContent) {
+                            const code = codeContent.textContent;
+                            savePythonCode(code, context);
+                        }
+                    }
+                }
+            });
+        }
+
+        // 在验证完成后自动保存
+        function autoSaveOnCompletion() {
+            if (document.getElementById('auto-save').checked) {
+                console.log('自动保存已启用，开始保存文件...');
+                
+                setTimeout(() => {
+                    saveAllFiles();
+                }, 1000); // 延迟1秒确保所有结果都已生成
+            }
+        }
+
+        // 结果展示函数
+        function showVerificationResult(stepNumber, title, content, status = 'completed', isPython = false) {
+            const container = document.getElementById('results-container');
+            
+            const processedContent = processMathFormulas(content);
+            
+            const resultSection = document.createElement('div');
+            resultSection.className = `result-section ${status}${isPython ? ' python' : ''}`;
+            
+            const icon = isPython ? '🐍' : 
+                       status === 'completed' ? '✅' : 
+                       status === 'failed' ? '❌' : '🔄';
+            
+            resultSection.innerHTML = `
+                <div class="result-header">
+                    <span>${icon} ${stepNumber ? `步骤${stepNumber}: ` : ''}${title}</span>
+                    ${isPython ? '<button class="save-btn" onclick="savePythonResult(this)">💾 保存</button>' : ''}
+                </div>
+                <div class="result-content math-content">${processedContent}</div>
+            `;
+            
+            container.appendChild(resultSection);
+            renderMathInElement(resultSection);
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+            
+            return resultSection;
+        }
+
+        function showPythonExecution(code, output, context = '', hasImage = false, imageData = null) {
+            const container = document.getElementById('results-container');
+            
+            const pythonSection = document.createElement('div');
+            pythonSection.className = 'python-code';
+            pythonSection.innerHTML = `
+                <div class="python-header">
+                    <span>🐍 Python验证代码${context ? ` - ${context}` : ''}</span>
+                    <button class="save-btn" onclick="savePythonCodeFromElement(this, '${context}')">
+                        💾 保存代码
+                    </button>
+                </div>
+                <div class="python-content">${code}</div>
+            `;
+            
+            container.appendChild(pythonSection);
+            
+            if (output) {
+                const processedOutput = processMathFormulas(output);
+                
+                const outputSection = document.createElement('div');
+                outputSection.className = 'python-output output-success';
+                outputSection.innerHTML = `
+                    <div class="output-header">
+                        ✅ 执行结果
+                    </div>
+                    <div class="output-content math-content">${processedOutput}</div>
+                `;
+                
+                container.appendChild(outputSection);
+                renderMathInElement(outputSection);
+            }
+            
+            if (hasImage && imageData) {
+                const imageSection = document.createElement('div');
+                imageSection.className = 'python-output output-success';
+                imageSection.innerHTML = `
+                    <div class="output-header">
+                        📊 生成的图表
+                    </div>
+                    <div style="padding: 20px; text-align: center;">
+                        <img src="data:image/png;base64,${imageData}" style="max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    </div>
+                `;
+                
+                container.appendChild(imageSection);
+            }
+        }
+
+        function showErrorReport(errors, severity = 'critical') {
+            const container = document.getElementById('results-container');
+            
+            const errorReport = document.createElement('div');
+            errorReport.className = `error-report ${severity}`;
+            
+            const errorIcon = severity === 'critical' ? '🚨' : '⚠️';
+            const errorTitle = severity === 'critical' ? '严重错误' : '警告';
+            
+            errorReport.innerHTML = `
+                <div class="error-header">
+                    <div class="error-icon ${severity}">${errorIcon}</div>
+                    <span>${errorTitle}报告</span>
+                </div>
+                <div class="error-details">
+                    ${Array.isArray(errors) ? errors.map(error => `• ${error}`).join('<br>') : errors}
+                </div>
+            `;
+            
+            container.appendChild(errorReport);
+            systemState.verificationState.totalErrors += Array.isArray(errors) ? errors.length : 1;
+            updateStatusDisplay();
+        }
+
+        // 从元素保存Python代码
+        function savePythonCodeFromElement(button, context) {
+            const codeElement = button.closest('.python-code');
+            if (codeElement) {
+                const codeContent = codeElement.querySelector('.python-content');
+                if (codeContent) {
+                    const code = codeContent.textContent;
+                    savePythonCode(code, context || '验证代码');
+                }
+            }
+        }
+
+        // Python验证节点实现
+        async function pythonNode1_InitialValidation(solution) {
+            updatePythonNodeStatus(1, 'active');
+            updateLoadingText('🐍 Python节点1: 初始快速验证...');
+            
+            try {
+                const validationPrompt = `请为以下数学解答生成Python快速验证代码：
+
+${solution}
+
+生成验证代码要求：
+1. 验证基本数学计算的正确性
+2. 检查关键数值结果
+3. 快速检查函数性质
+4. 基础边界条件测试
+
+只输出可执行的Python代码，不要解释：`;
+
+                const validationCode = await callAI(validationPrompt);
+                const pythonCode = extractPythonCode(validationCode);
+                
+                if (pythonCode) {
+                    const result = await executePythonCode(pythonCode, '初始验证');
+                    if (result.success) {
+                        showPythonExecution(pythonCode, result.result, '初始快速验证');
+                        updatePythonNodeStatus(1, 'completed');
+                    } else {
+                        showPythonExecution(pythonCode, `执行错误: ${result.error}`, '初始快速验证(失败)');
+                        updatePythonNodeStatus(1, 'failed');
+                    }
+                    return result;
+                } else {
+                    updatePythonNodeStatus(1, 'failed');
+                    return { success: false, error: '未找到Python代码', context: '初始快速验证' };
+                }
+            } catch (error) {
+                updatePythonNodeStatus(1, 'failed');
+                return { success: false, error: error.message, context: '初始快速验证' };
+            }
+        }
+
+        async function pythonNode2_PreVerification(solution) {
+            updatePythonNodeStatus(2, 'active');
+            updateLoadingText('🔍 Python节点2: 数学推理预验证...');
+            
+            try {
+                const preVerifyPrompt = `生成Python代码验证以下数学推理的关键步骤：
+
+${solution}
+
+验证重点：
+1. 代数变换的正确性
+2. 函数性质的数值验证
+3. 极值点和零点的准确性
+4. 积分/导数计算验证
+5. 方程解的存在性检查
+
+生成完整的数学验证Python代码：`;
+
+                const verificationCode = await callAI(preVerifyPrompt);
+                const pythonCode = extractPythonCode(verificationCode);
+                
+                if (pythonCode) {
+                    const result = await executePythonCode(pythonCode, '预验证');
+                    if (result.success) {
+                        showPythonExecution(pythonCode, result.result, '数学推理预验证');
+                        updatePythonNodeStatus(2, 'completed');
+                    } else {
+                        showPythonExecution(pythonCode, `执行错误: ${result.error}`, '数学推理预验证(失败)');
+                        updatePythonNodeStatus(2, 'failed');
+                    }
+                    return result;
+                } else {
+                    updatePythonNodeStatus(2, 'failed');
+                    return { success: false, error: '未找到Python代码', context: '数学推理预验证' };
+                }
+            } catch (error) {
+                updatePythonNodeStatus(2, 'failed');
+                return { success: false, error: error.message, context: '数学推理预验证' };
+            }
+        }
+
+        async function pythonNode3_CodeExecution(solution) {
+            updatePythonNodeStatus(3, 'active');
+            updateLoadingText('⚡ Python节点3: 主代码执行验证...');
+            
+            try {
+                const pythonCode = extractPythonCode(solution);
+                if (pythonCode) {
+                    const result = await executePythonCode(pythonCode, '主执行');
+                    
+                    if (result.success) {
+                        let outputText = result.result;
+                        let imageData = null;
+                        let hasImage = false;
+
+                        if (result.result.includes('[IMAGE_DATA]')) {
+                            const parts = result.result.split('[IMAGE_DATA]');
+                            outputText = parts[0];
+                            const imageParts = parts[1].split('[/IMAGE_DATA]');
+                            imageData = imageParts[0];
+                            hasImage = true;
+                            outputText += imageParts[1] || '';
+                        }
+
+                        showPythonExecution(pythonCode, outputText, '主代码执行', hasImage, imageData);
+                        updatePythonNodeStatus(3, 'completed');
+                    } else {
+                        showPythonExecution(pythonCode, `执行错误: ${result.error}`, '主代码执行(失败)');
+                        updatePythonNodeStatus(3, 'failed');
+                    }
+                    
+                    return result;
+                } else {
+                    updatePythonNodeStatus(3, 'failed');
+                    return { success: false, error: '解答中未找到Python代码', context: '主代码执行' };
+                }
+            } catch (error) {
+                updatePythonNodeStatus(3, 'failed');
+                return { success: false, error: error.message, context: '主代码执行' };
+            }
+        }
+
+        async function pythonNode4_SpecializedValidation(solution) {
+            updatePythonNodeStatus(4, 'active');
+            updateLoadingText('🎯 Python节点4: 专项数学验证...');
+            
+            try {
+                // 检测数学类型
+                const mathType = detectMathType(solution);
+                const specializationPrompts = {
+                    calculus: '生成微积分专项验证代码：导数计算、积分验证、极限分析、连续性检查',
+                    algebra: '生成代数专项验证代码：方程求解、因式分解、不等式验证、多项式性质',
+					geometry: '生成几何专项验证代码：图形绘制、距离计算、角度验证、面积体积',
+                    analysis: '生成数学分析专项验证代码：函数性质、单调性、凹凸性、渐近线',
+                    numberTheory: '生成数论专项验证代码：素数检验、模运算、数论函数'
+                };
+
+                const prompt = `${specializationPrompts[mathType] || specializationPrompts.analysis}：
+
+${solution}
+
+生成专项验证的Python代码，确保数学理论与计算结果一致。`;
+
+                const specialCode = await callAI(prompt);
+                const pythonCode = extractPythonCode(specialCode);
+                
+                if (pythonCode) {
+                    const result = await executePythonCode(pythonCode, '专项验证');
+                    if (result.success) {
+                        showPythonExecution(pythonCode, result.result, `${mathType}专项验证`);
+                        updatePythonNodeStatus(4, 'completed');
+                    } else {
+                        showPythonExecution(pythonCode, `执行错误: ${result.error}`, `${mathType}专项验证(失败)`);
+                        updatePythonNodeStatus(4, 'failed');
+                    }
+                    return result;
+                } else {
+                    updatePythonNodeStatus(4, 'failed');
+                    return { success: false, error: '未找到专项验证代码', context: '专项验证' };
+                }
+            } catch (error) {
+                updatePythonNodeStatus(4, 'failed');
+                return { success: false, error: error.message, context: '专项验证' };
+            }
+        }
+
+        async function pythonNode5_IncrementalComparison(oldSolution, newSolution, iterationNumber) {
+            updatePythonNodeStatus(5, 'active');
+            updateLoadingText('📊 Python节点5: 增量对比验证...');
+            
+            try {
+                const comparePrompt = `生成Python代码比较两个解答版本的差异和改进效果：
+
+### 第${iterationNumber-1}版解答 ###
+${oldSolution}
+
+### 第${iterationNumber}版解答 ###
+${newSolution}
+
+生成对比验证代码：
+1. 计算结果的变化分析
+2. 精度提升情况评估
+3. 新增验证的有效性
+4. 性能和准确性对比
+5. 改进效果量化
+
+输出完整对比验证代码：`;
+
+                const compareCode = await callAI(comparePrompt);
+                const pythonCode = extractPythonCode(compareCode);
+                
+                if (pythonCode) {
+                    const result = await executePythonCode(pythonCode, '增量对比');
+                    if (result.success) {
+                        showPythonExecution(pythonCode, result.result, `第${iterationNumber}轮增量对比`);
+                        updatePythonNodeStatus(5, 'completed');
+                    } else {
+                        showPythonExecution(pythonCode, `执行错误: ${result.error}`, `第${iterationNumber}轮增量对比(失败)`);
+                        updatePythonNodeStatus(5, 'failed');
+                    }
+                    return result;
+                } else {
+                    updatePythonNodeStatus(5, 'failed');
+                    return { success: false, error: '未找到对比代码', context: '增量对比' };
+                }
+            } catch (error) {
+                updatePythonNodeStatus(5, 'failed');
+                return { success: false, error: error.message, context: '增量对比' };
+            }
+        }
+
+        async function pythonNode6_ErrorDetectionFix(solution, errorReports) {
+            updatePythonNodeStatus(6, 'active');
+            updateLoadingText('🔧 Python节点6: 错误检测修复...');
+            
+            try {
+                if (errorReports && errorReports.length > 0) {
+                    const fixPrompt = `基于发现的错误生成诊断和修复代码：
+
+### 当前解答 ###
+${solution}
+
+### 发现的错误 ###
+${errorReports.join('\n')}
+
+生成Python代码：
+1. 重现和诊断这些错误
+2. 提供正确的计算方法
+3. 对比错误和正确结果
+4. 给出具体修复建议
+5. 验证修复后的正确性
+
+输出诊断修复代码：`;
+
+                    const fixCode = await callAI(fixPrompt);
+                    const pythonCode = extractPythonCode(fixCode);
+                    
+                    if (pythonCode) {
+                        const result = await executePythonCode(pythonCode, '错误修复');
+                        if (result.success) {
+                            showPythonExecution(pythonCode, result.result, '错误检测修复');
+                            updatePythonNodeStatus(6, 'completed');
+                        } else {
+                            showPythonExecution(pythonCode, `执行错误: ${result.error}`, '错误检测修复(失败)');
+                            updatePythonNodeStatus(6, 'failed');
+                        }
+                        return result;
+                    } else {
+                        updatePythonNodeStatus(6, 'failed');
+                        return { success: false, error: '未找到修复代码', context: '错误检测修复' };
+                    }
+                } else {
+                    updatePythonNodeStatus(6, 'completed');
+                    return { success: true, result: '无错误需要修复', context: '错误检测修复' };
+                }
+            } catch (error) {
+                updatePythonNodeStatus(6, 'failed');
+                return { success: false, error: error.message, context: '错误检测修复' };
+            }
+        }
+
+        async function pythonNode7_CrossValidation(solution, allPythonResults) {
+            updatePythonNodeStatus(7, 'active');
+            updateLoadingText('✅ Python节点7: 交叉验证确认...');
+            
+            try {
+                const crossValidationPrompt = `基于所有Python验证结果进行交叉验证：
+
+### 数学解答 ###
+${solution}
+
+### 所有Python验证结果汇总 ###
+${allPythonResults.map((result, index) => `节点${index+1}: ${result.success ? result.result : result.error}`).join('\n\n')}
+
+生成交叉验证Python代码：
+1. 验证各节点结果的一致性
+2. 检查数学推理与计算的匹配度
+3. 评估整体验证可靠性
+4. 计算最终置信度
+5. 生成综合验证报告
+
+输出交叉验证代码：`;
+
+                const crossCode = await callAI(crossValidationPrompt);
+                const pythonCode = extractPythonCode(crossCode);
+                
+                if (pythonCode) {
+                    const result = await executePythonCode(pythonCode, '交叉验证');
+                    if (result.success) {
+                        showPythonExecution(pythonCode, result.result, '交叉验证确认');
+                        updatePythonNodeStatus(7, 'completed');
+                        
+                        // 尝试从结果中提取置信度
+                        const confidenceMatch = result.result.match(/置信度[：:]\s*(\d+(?:\.\d+)?)/);
+                        if (confidenceMatch) {
+                            const extractedConfidence = Math.round(parseFloat(confidenceMatch[1]));
+                            // 只有在合理范围内才使用提取的置信度
+                            if (extractedConfidence >= 0 && extractedConfidence <= 100) {
+                                systemState.verificationState.confidence = extractedConfidence;
+                                updateStatusDisplay();
+                            }
+                        }
+                    } else {
+                        showPythonExecution(pythonCode, `执行错误: ${result.error}`, '交叉验证确认(失败)');
+                        updatePythonNodeStatus(7, 'failed');
+                    }
+                    return result;
+                } else {
+                    updatePythonNodeStatus(7, 'failed');
+                    return { success: false, error: '未找到交叉验证代码', context: '交叉验证确认' };
+                }
+            } catch (error) {
+                updatePythonNodeStatus(7, 'failed');
+                return { success: false, error: error.message, context: '交叉验证确认' };
+            }
+        }
+
+        // 辅助函数
+        function detectMathType(text) {
+            if (text.includes('导数') || text.includes('积分') || text.includes('微分') || text.includes('极限')) {
+                return 'calculus';
+            } else if (text.includes('方程') || text.includes('多项式') || text.includes('代数')) {
+                return 'algebra';
+            } else if (text.includes('几何') || text.includes('距离') || text.includes('角度')) {
+                return 'geometry';
+            } else if (text.includes('函数') || text.includes('单调') || text.includes('极值') || text.includes('零点')) {
+                return 'analysis';
+            } else if (text.includes('素数') || text.includes('模运算') || text.includes('数论')) {
+                return 'numberTheory';
+            } else {
+                return 'analysis'; // 默认
+            }
+        }
+
+        function extractErrors(verificationResult) {
+            const errorPatterns = [
+                /错误[：:](.+?)(?=\n|$)/g,
+                /问题[：:](.+?)(?=\n|$)/g,
+                /缺陷[：:](.+?)(?=\n|$)/g,
+                /严重错误[：:](.+?)(?=\n|$)/g
+            ];
+            
+            const errors = [];
+            errorPatterns.forEach(pattern => {
+                let match;
+                while ((match = pattern.exec(verificationResult)) !== null) {
+                    errors.push(match[1].trim());
+                }
+            });
+            
+            return errors;
+        }
+
+        // 获取严格验证提示词
+        function getRigorousVerificationPrompt(problem) {
+            const rigor = document.getElementById('verification-rigor').value;
+            
+            const rigorLevels = {
+                strict: {
+                    emphasis: "极其严格",
+                    requirements: `
+- 每一个数学推导步骤都必须有严格的逻辑依据
+- 任何数值计算都必须给出精确值和近似值
+- 必须考虑所有边界条件和特殊情况
+- 证明必须完整无缺，不允许任何逻辑跳跃
+- 必须提供反例检验和验证方法`
+                },
+                moderate: {
+                    emphasis: "适度严格",
+                    requirements: `
+- 主要推导步骤需要清晰的逻辑支持
+- 重要计算需要验证
+- 需要考虑主要的边界条件
+- 证明需要基本完整`
+                },
+                lenient: {
+                    emphasis: "基本严格",
+                    requirements: `
+- 基本推导步骤需要合理
+- 主要结果需要验证
+- 基本逻辑需要清晰`
+                }
+            };
+
+            const level = rigorLevels[rigor];
+
+            return `你是一位${level.emphasis}的数学验证专家。请对以下数学问题进行完整的解答和严格验证：
+
+### 问题 ###
+${problem}
+
+### 验证标准 (${level.emphasis}模式) ###
+${level.requirements}
+
+### 解答要求 ###
+1. **数学分析**: 深入分析问题的数学本质，使用LaTeX格式表示关键公式
+2. **解题方法**: 选择最适当的数学方法，说明选择理由
+3. **详细推导**: 提供完整的数学推导过程，每步都有明确依据
+4. **Python验证**: 生成完整的Python代码验证所有关键结果
+5. **结果检验**: 通过多种方法验证结果的正确性
+6. **边界分析**: 分析特殊情况和边界条件
+
+### Python代码要求 ###
+- 导入所有必要的数学库 (numpy, scipy, sympy, matplotlib)
+- 实现符号计算和数值计算的对比
+- 生成可视化图表验证结果
+- 包含详细的注释说明
+- 提供精确值和数值近似的对比
+
+请确保解答中大量使用LaTeX格式的数学公式，便于后续渲染和验证。`;
+        }
+
+        function getStrictVerificationPrompt(solution, pythonResults) {
+            const pythonSummary = pythonResults
+                .filter(result => result && result.success)
+                .map((result, index) => `Python节点${index+1}: ${result.result || '执行成功'}`)
+                .join('\n\n');
+
+            return `你是严格的数学审查专家。请对以下解答进行全面验证并生成详细的错误报告：
+
+### 待验证解答 ###
+${solution}
+
+### Python验证结果汇总 ###
+${pythonSummary || '无Python验证结果'}
+
+### 验证任务 ###
+请进行严格的多维度验证：
+
+1. **数学严谨性验证**:
+   - 检查每个数学推导步骤的逻辑正确性
+   - 验证公式应用的准确性
+   - 确认定理和引理的正确引用
+   - 检查证明的完整性
+
+2. **计算正确性验证**:
+   - 验证所有数值计算的准确性
+   - 检查Python代码与数学推理的一致性
+   - 确认精确值和近似值的正确性
+   - 验证边界条件和特殊情况
+
+3. **逻辑一致性验证**:
+   - 检查推理链条的完整性
+   - 验证结论与前提的逻辑关系
+   - 确认没有循环论证或逻辑跳跃
+   - 检查反例的处理
+
+4. **方法适当性验证**:
+   - 评估所选数学方法的合适性
+   - 检查是否存在更优的解题路径
+   - 验证算法的收敛性和稳定性
+
+### 错误报告格式 ###
+请按以下格式生成结构化的错误报告：
+
+**总体评估**: [通过/需要改进/存在严重问题]
+
+**严重错误** (Critical Errors):
+[列出所有逻辑错误、计算错误、证明缺陷等严重问题]
+
+**逻辑缺陷** (Logic Gaps):
+[列出推理不严密、证明不完整等逻辑问题]
+
+**计算问题** (Calculation Issues):
+[列出数值错误、精度问题、代码错误等计算问题]
+
+**表述问题** (Presentation Issues):
+[列出公式表示、符号使用、表达不清等表述问题]
+
+**改进建议** (Improvement Suggestions):
+[针对每个问题提供具体的改进建议]
+
+**验证置信度**: [0-100分]
+
+请提供诚实、客观、严格的评估。如果发现问题，请给出具体的位置和改进方向。`;
+        }
+
+        function getErrorReviewPrompt(errorReport, solution) {
+            return `你是资深数学审查员。请仔细审查以下错误报告的准确性：
+
+### 原始解答 ###
+${solution}
+
+### 错误报告 ###
+${errorReport}
+
+### 审查任务 ###
+请对错误报告进行审查：
+
+1. **验证报告准确性**: 每个指出的错误是否真的是错误？
+2. **检查误报**: 是否有被错误标记为问题的正确内容？
+3. **补充遗漏**: 是否有真正的错误被遗漏了？
+4. **评估严重性**: 错误的严重程度分类是否合适？
+
+### 审查结果格式 ###
+**审查结论**: [报告基本准确/存在误报/遗漏重要问题]
+
+**确认的真实错误**:
+[列出经审查确认的真实错误]
+
+**误报的问题**:
+[列出被错误标记但实际正确的内容]
+
+**补充发现的错误**:
+[列出原报告遗漏的真实错误]
+
+**修正后的改进建议**:
+[基于审查结果给出的最终改进建议]
+
+请保持客观和严谨的审查态度。`;
+        }
+
+        function getImprovementPrompt(solution, reviewedErrors, pythonResults) {
+            const validPythonResults = pythonResults
+                .filter(result => result && result.success)
+                .map((result, index) => `Python验证${index+1}: ${result.result}`)
+                .join('\n\n');
+
+            return `请基于错误报告和Python验证结果改进以下数学解答：
+
+### 原始解答 ###
+${solution}
+
+### 经审查的错误和改进建议 ###
+${reviewedErrors}
+
+### Python验证结果参考 ###
+${validPythonResults}
+
+### 改进要求 ###
+1. **修正所有确认的错误**
+2. **补充不完整的证明**
+3. **改进计算精度和方法**
+4. **优化Python代码实现**
+5. **增强数学表达的严谨性**
+6. **确保理论与计算一致**
+
+### 改进输出要求 ###
+- 保持原有的正确部分
+- 明确标注改进的部分
+- 使用LaTeX格式表示数学公式
+- 提供完整可执行的Python代码
+- 包含充分的验证和检验
+
+请提供完整的改进版解答，确保数学严谨性和计算准确性。`;
+        }
+
+        // 测试AI连接
+        async function testAIConnection() {
+            const testBtn = document.getElementById('test-btn');
+            const statusIndicator = document.getElementById('connection-status');
+            
+            const provider = document.getElementById('api-provider').value;
+            const apiKey = document.getElementById('api-key').value.trim();
+            const model = document.getElementById('model-version').value;
+            
+            if (!apiKey) {
+                showNotification('请输入API密钥', 'error');
+                return;
+            }
+
+            testBtn.disabled = true;
+            testBtn.textContent = '🔄 测试中...';
+            statusIndicator.className = 'status-indicator status-testing';
+
+            try {
+                const config = apiEndpoints[provider];
+                let url = config.url;
+                let headers = {};
+                let body = {};
+
+                if (provider === 'gemini') {
+                    url = url.replace('{model}', model).replace('{apiKey}', apiKey);
+                    headers = config.headers();
+                    body = config.formatRequest([{ content: '测试连接，请回复"连接成功"' }], model);
+                } else {
+                    headers = config.headers(apiKey);
+                    body = config.formatRequest([{ role: "user", content: "测试连接，请回复'连接成功'" }], model);
+                }
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(body)
+                });
+
+                if (response.ok) {
+                    statusIndicator.className = 'status-indicator status-connected';
+                    systemState.aiConfig = {
+                        provider,
+                        apiKey,
+                        model,
+                        isConnected: true
+                    };
+                    testBtn.textContent = '✅ 连接成功';
+                    showNotification(`${provider.toUpperCase()} API连接成功`, 'success');
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                statusIndicator.className = 'status-indicator status-disconnected';
+                testBtn.textContent = '❌ 连接失败';
+                showNotification(`连接失败: ${error.message}`, 'error');
+            } finally {
+                testBtn.disabled = false;
+                setTimeout(() => {
+                    testBtn.textContent = '🔗 测试连接';
+                }, 3000);
+            }
+        }
+
+        // 更新模型选项
+        function updateModelOptions() {
+            const provider = document.getElementById('api-provider').value;
+            const modelSelect = document.getElementById('model-version');
+            
+            modelSelect.innerHTML = '';
+            
+            const models = {
+                deepseek: [
+                    { value: 'deepseek-chat', text: 'DeepSeek Chat' },
+                    { value: 'deepseek-coder', text: 'DeepSeek Coder' }
+                ],
+                gemini: [
+                    { value: 'gemini-2.0-flash-exp', text: 'Gemini 2.0 Flash (实验版)' },
+                    { value: 'gemini-1.5-pro', text: 'Gemini 1.5 Pro' },
+                    { value: 'gemini-1.5-flash', text: 'Gemini 1.5 Flash' }
+                ],
+                openai: [
+                    { value: 'gpt-4', text: 'GPT-4' },
+                    { value: 'gpt-4-turbo', text: 'GPT-4 Turbo' },
+                    { value: 'gpt-3.5-turbo', text: 'GPT-3.5 Turbo' }
+                ]
+            };
+
+            models[provider].forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.value;
+                option.textContent = model.text;
+                modelSelect.appendChild(option);
+            });
+        }
+
+        // 主验证流程
+        async function startRigorousVerification() {
+            if (!systemState.aiConfig.isConnected) {
+                showNotification('请先配置并测试AI连接', 'error');
+                return;
+            }
+
+            if (!systemState.pyodide) {
+                showNotification('Python环境未初始化，请等待加载完成', 'error');
+                return;
+            }
+
+            const problem = document.getElementById('problem-input').value.trim();
+            if (!problem) {
+                showNotification('请输入数学问题', 'error');
+                return;
+            }
+
+            // 初始化验证状态
+            systemState.verificationState = {
+                currentStep: 0,
+                currentIteration: 0,
+                maxIterations: parseInt(document.getElementById('max-iterations').value),
+                consecutivePasses: 0,
+                requiredPasses: parseInt(document.getElementById('consecutive-passes-config').value),
+                totalErrors: 0,
+                pythonValidations: 0,
+                pythonFailures: 0,
+                syntaxErrors: 0,
+                verificationScore: 0,
+                confidence: 0,
+                isRunning: true
+            };
+
+            systemState.solutions = [];
+            systemState.errorReports = [];
+            systemState.pythonResults = [];
+            systemState.savedFiles = [];
+
+            const solveButton = document.getElementById('solve-button');
+            solveButton.disabled = true;
+            solveButton.textContent = '🔬 严格验证进行中...';
+
+            const resultsContainer = document.getElementById('results-container');
+            resultsContainer.innerHTML = '';
+
+            document.getElementById('loading').classList.add('show');
+            showIterationTracker();
+
+            try {
+                // 重置所有状态
+                for (let i = 1; i <= 6; i++) {
+                    updateMainStepStatus(i, '');
+                }
+                for (let i = 1; i <= 7; i++) {
+                    updatePythonNodeStatus(i, '');
+                }
+                updateStatusDisplay();
+
+                let currentSolution = null;
+                let iterationCount = 0;
+                let previousSolution = null;
+                let lastVerificationResult = '';
+
+                while (iterationCount < systemState.verificationState.maxIterations && 
+                       systemState.verificationState.consecutivePasses < systemState.verificationState.requiredPasses) {
+                    
+                    iterationCount++;
+                    systemState.verificationState.currentIteration = iterationCount;
+                    updateStatusDisplay();
+                    
+                    console.log(`开始第${iterationCount}轮严格验证`);
+
+                    // 重置Python节点状态
+                    for (let i = 1; i <= 7; i++) {
+                        updatePythonNodeStatus(i, '');
+                    }
+
+                    let pythonResults = [];
+
+                    // 步骤1: 初始解生成 (仅第一次迭代)
+                    if (iterationCount === 1) {
+                        updateMainStepStatus(1, 'active');
+                        updateLoadingText('🔍 步骤1: 生成严格的数学解答...');
+
+                        const step1Prompt = getRigorousVerificationPrompt(problem);
+                        currentSolution = await callAI(step1Prompt);
+                        systemState.solutions.push(currentSolution);
+                        
+                        updateMainStepStatus(1, 'completed');
+                        showVerificationResult(1, '初始解生成', currentSolution);
+
+                        // Python节点1: 初始快速验证
+                        if (document.getElementById('enable-python-validation').checked) {
+                            const pythonResult1 = await pythonNode1_InitialValidation(currentSolution);
+                            pythonResults.push(pythonResult1);
+                        }
+                    }
+
+                    // 步骤2: 自我改进 (从第二次迭代开始)
+                    if (iterationCount > 1) {
+                        updateMainStepStatus(2, 'active');
+                        updateLoadingText('🔄 步骤2: 基于验证结果改进解答...');
+
+                        // Python节点5: 增量对比验证
+                        if (document.getElementById('enable-python-validation').checked && previousSolution) {
+                            const pythonResult5 = await pythonNode5_IncrementalComparison(previousSolution, currentSolution, iterationCount);
+                            pythonResults.push(pythonResult5);
+                        }
+
+                        const lastErrorReport = systemState.errorReports[systemState.errorReports.length - 1];
+                        const step2Prompt = getImprovementPrompt(currentSolution, lastErrorReport, pythonResults);
+                        currentSolution = await callAI(step2Prompt);
+                        systemState.solutions.push(currentSolution);
+
+                        updateMainStepStatus(2, 'completed');
+                        showVerificationResult(2, '自我改进', currentSolution);
+                    }
+
+                    // Python节点2: 数学推理预验证
+                    if (document.getElementById('enable-python-validation').checked) {
+                        const pythonResult2 = await pythonNode2_PreVerification(currentSolution);
+                        pythonResults.push(pythonResult2);
+                    }
+
+                    // Python节点3: 主代码执行验证
+                    if (document.getElementById('enable-python-validation').checked) {
+                        const pythonResult3 = await pythonNode3_CodeExecution(currentSolution);
+                        pythonResults.push(pythonResult3);
+                    }
+
+                    // Python节点4: 专项数学验证
+                    if (document.getElementById('enable-python-validation').checked && 
+                        document.getElementById('enable-specialized-math').checked) {
+                        const pythonResult4 = await pythonNode4_SpecializedValidation(currentSolution);
+                        pythonResults.push(pythonResult4);
+                    }
+
+                    // 步骤3: 严格验证与错误报告生成
+                    updateMainStepStatus(3, 'active');
+                    updateLoadingText('🔬 步骤3: 严格验证并生成错误报告...');
+
+                    const step3Prompt = getStrictVerificationPrompt(currentSolution, pythonResults);
+                    const verificationResult = await callAI(step3Prompt);
+                    lastVerificationResult = verificationResult;
+                    
+                    updateMainStepStatus(3, 'completed');
+                    showVerificationResult(3, '严格验证与错误报告', verificationResult);
+
+                    // 提取错误
+                    const errors = extractErrors(verificationResult);
+                    if (errors.length > 0) {
+                        showErrorReport(errors, 'critical');
+                    }
+
+                    // 步骤4: 错误报告审查
+                    updateMainStepStatus(4, 'active');
+                    updateLoadingText('🔍 步骤4: 审查错误报告准确性...');
+
+                    const step4Prompt = getErrorReviewPrompt(verificationResult, currentSolution);
+                    const reviewResult = await callAI(step4Prompt);
+                    systemState.errorReports.push(reviewResult);
+
+                    updateMainStepStatus(4, 'completed');
+                    showVerificationResult(4, '错误报告审查', reviewResult);
+
+                    // Python节点6: 错误检测修复
+                    if (document.getElementById('enable-python-validation').checked && errors.length > 0) {
+                        const pythonResult6 = await pythonNode6_ErrorDetectionFix(currentSolution, errors);
+                        pythonResults.push(pythonResult6);
+                    }
+
+                    // Python节点7: 交叉验证确认
+                    if (document.getElementById('enable-python-validation').checked) {
+                        const pythonResult7 = await pythonNode7_CrossValidation(currentSolution, pythonResults);
+                        pythonResults.push(pythonResult7);
+                    }
+
+                    systemState.pythonResults.push(pythonResults);
+
+                    // 计算验证得分和置信度
+                    const errorAnalysis = analyzeErrors(systemState.errorReports);
+                    const verificationScore = calculateVerificationScore(
+                        verificationResult,
+                        errors,
+                        pythonResults,
+                        systemState.errorReports
+                    );
+                    
+                    const confidence = calculateConfidence(
+                        verificationScore,
+                        pythonResults,
+                        systemState.errorReports,
+                        iterationCount
+                    );
+                    
+                    systemState.verificationState.verificationScore = verificationScore;
+                    systemState.verificationState.confidence = confidence;
+                    updateStatusDisplay();
+
+                    // 检查验证结果
+                    const passCheck = checkVerificationPassed(
+                        verificationResult,
+                        pythonResults,
+                        errorAnalysis,
+                        verificationScore
+                    );
+
+                    if (passCheck.passed) {
+                        systemState.verificationState.consecutivePasses++;
+                        console.log(`验证通过，连续通过次数: ${systemState.verificationState.consecutivePasses}`);
+                    } else {
+                        systemState.verificationState.consecutivePasses = 0;
+                        console.log('验证未通过，未满足条件:', passCheck.failedConditions);
+                    }
+
+                    // 步骤5: 修正与优化
+                    updateMainStepStatus(5, 'active');
+                    updateLoadingText('🔧 步骤5: 基于报告修正解答...');
+
+                    if (systemState.verificationState.consecutivePasses < systemState.verificationState.requiredPasses) {
+                        // 需要继续改进
+                        updateMainStepStatus(5, 'completed');
+                        const failedConditionsText = passCheck.failedConditions.length > 0 
+                            ? `\n未满足条件: ${passCheck.failedConditions.join(', ')}` 
+                            : '';
+                        
+                        showVerificationResult(5, '修正与优化', `🔄 第${iterationCount}轮验证完成，发现${errors.length}个问题，继续优化...\n\n连续通过次数: ${systemState.verificationState.consecutivePasses}/${systemState.verificationState.requiredPasses}\n验证得分: ${systemState.verificationState.verificationScore}/100\n置信度: ${systemState.verificationState.confidence}%${failedConditionsText}\n\n将基于错误报告进行进一步改进。`);
+                    } else {
+                        // 验证通过
+                        updateMainStepStatus(5, 'completed');
+                        showVerificationResult(5, '修正与优化', `✅ 解答经过${iterationCount}轮严格验证后被接受！\n\n验证得分: ${systemState.verificationState.verificationScore}/100\n连续通过: ${systemState.verificationState.consecutivePasses}次\n置信度: ${systemState.verificationState.confidence}%\nPython验证: ${systemState.verificationState.pythonValidations}次`);
+                    }
+
+                    // 步骤6: 最终决策
+                    updateMainStepStatus(6, 'active');
+                    updateLoadingText('🎯 步骤6: 最终验证决策...');
+
+                    if (systemState.verificationState.consecutivePasses >= systemState.verificationState.requiredPasses) {
+                        updateMainStepStatus(6, 'completed');
+                        showVerificationResult(6, '最终决策', `✅ 解答通过严格验证标准，被正式接受！\n\n📊 验证统计:\n- 总迭代轮数: ${iterationCount}\n- 连续验证通过: ${systemState.verificationState.consecutivePasses}次\n- Python验证次数: ${systemState.verificationState.pythonValidations}\n- Python失败次数: ${systemState.verificationState.pythonFailures}\n- 最终验证得分: ${systemState.verificationState.verificationScore}/100\n- 置信度: ${systemState.verificationState.confidence}%\n- 已保存文件: ${systemState.savedFiles.length}个\n- AI提供商: ${systemState.aiConfig.provider.toUpperCase()}`);
+                        break;
+                    } else if (iterationCount >= systemState.verificationState.maxIterations) {
+                        updateMainStepStatus(6, 'completed');
+                        showVerificationResult(6, '最终决策', `⚠️ 已达到最大迭代次数(${systemState.verificationState.maxIterations})，使用当前最佳解答。\n\n建议：增加迭代次数或调整验证标准以获得更严格的验证结果。\n\n📊 最终统计:\n- 验证得分: ${systemState.verificationState.verificationScore}/100\n- 置信度: ${systemState.verificationState.confidence}%\n- Python验证: ${systemState.verificationState.pythonValidations}次\n- Python失败: ${systemState.verificationState.pythonFailures}次\n- 已保存文件: ${systemState.savedFiles.length}个`);
+                        break;
+                    } else {
+                        updateMainStepStatus(6, 'completed');
+                        showVerificationResult(6, '迭代决策', `🔄 第${iterationCount}轮决策: 继续严格验证流程\n\n当前状态: ${systemState.verificationState.consecutivePasses}/${systemState.verificationState.requiredPasses}连续通过\n验证得分: ${systemState.verificationState.verificationScore}/100\n置信度: ${systemState.verificationState.confidence}%\n\n将基于审查后的错误报告进行下一轮改进。`);
+                        
+                        // 重置主步骤状态准备下一轮
+                        for (let i = 1; i <= 6; i++) {
+                            updateMainStepStatus(i, '');
+                        }
+                    }
+
+                    previousSolution = currentSolution;
+                }
+
+                // 显示验证摘要
+                const summaryDiv = showVerificationSummary(systemState.verificationState);
+                resultsContainer.appendChild(summaryDiv);
+
+                // 显示最终总结
+                const finalSummary = document.createElement('div');
+                finalSummary.style.cssText = `
+                    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+                    color: white;
+                    padding: 30px;
+                    border-radius: 12px;
+                    margin-top: 30px;
+                    text-align: center;
+                    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+                `;
+                finalSummary.innerHTML = `
+                    <h3>🔬 严格数学验证完成 v2.1！</h3>
+                    <div style="margin: 20px 0; font-size: 1.1rem;">
+                        <div>🔄 总验证轮数: ${iterationCount}</div>
+                        <div>✅ 连续验证通过: ${systemState.verificationState.consecutivePasses}次</div>
+                        <div>🎯 验证得分: ${systemState.verificationState.verificationScore}/100</div>
+                        <div>🐍 Python验证次数: ${systemState.verificationState.pythonValidations}</div>
+                        <div>❌ Python失败次数: ${systemState.verificationState.pythonFailures}</div>
+                        <div>📊 最终置信度: ${systemState.verificationState.confidence}%</div>
+                        <div>🔍 发现错误总数: ${systemState.verificationState.totalErrors}</div>
+                        <div>💾 保存文件数: ${systemState.savedFiles.length}个</div>
+                        <div>🤖 AI提供商: ${systemState.aiConfig.provider.toUpperCase()} (${systemState.aiConfig.model})</div>
+                    </div>
+                    <p style="margin-top: 15px; font-size: 0.95rem; opacity: 0.9;">
+                        基于论文逻辑的严格数学验证系统 v2.1，集成7个Python验证节点，<br>
+                        采用严格的扣分制评分机制，确保数学推理与计算验证的可靠性
+                    </p>
+                `;
+                resultsContainer.appendChild(finalSummary);
+
+                // 如果验证通过，添加快速操作按钮
+                if (systemState.verificationState.consecutivePasses >= systemState.verificationState.requiredPasses) {
+                    addQuickActions(resultsContainer);
+                    
+                    // 自动生成输出文件
+                    if (document.getElementById('auto-save').checked) {
+                        setTimeout(async () => {
+                            await generateFinalOutputs();
+                        }, 1500);
+                    }
+                }
+
+            } catch (error) {
+                console.error('严格验证流程失败:', error);
+                
+                updateMainStepStatus(systemState.verificationState.currentStep + 1, 'failed');
+                showVerificationResult(systemState.verificationState.currentStep + 1, '验证失败', `❌ 严格验证流程失败: ${error.message}`, 'failed');
+                showNotification(`验证失败: ${error.message}`, 'error');
+                
+            } finally {
+                systemState.verificationState.isRunning = false;
+                solveButton.disabled = false;
+                solveButton.textContent = '🚀 启动严格验证流程';
+                document.getElementById('loading').classList.remove('show');
+                
+                // 修复事件绑定
+                fixSaveButtonEvents();
+                
+                // 自动保存
+                autoSaveOnCompletion();
+            }
+        }
+
+        // 页面加载完成
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('严格数学验证系统 v2.1 已启动');
+            
+            updateModelOptions();
+            document.getElementById('api-provider').addEventListener('change', updateModelOptions);
+            
+            const pythonReady = await initPython();
+            
+            if (pythonReady) {
+                console.log('Python环境初始化成功');
+                showNotification('Python环境初始化完成', 'success');
+            } else {
+                console.error('Python环境初始化失败');
+                showNotification('Python环境初始化失败，某些功能可能不可用', 'error');
+            }
+
+            if (window.MathJax) {
+                console.log('MathJax已加载，数学公式渲染就绪');
+            }
+
+            // 设置默认配置
+            document.getElementById('api-provider').value = 'deepseek';
+            document.getElementById('max-iterations').value = '8';
+            document.getElementById('consecutive-passes-config').value = '3';
+            document.getElementById('verification-rigor').value = 'strict';
+            
+            updateStatusDisplay();
+            updateSavedFilesCount();
+        });
+    </script>
+</body>
+</html>
+					

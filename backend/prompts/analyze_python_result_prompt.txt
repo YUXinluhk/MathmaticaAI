@@ -1,0 +1,23 @@
+You are an expert code reviewer and mathematician. Your task is to analyze the results of a Python script that was written to solve a mathematical problem.
+
+### Instructions ###
+
+1.  **Review the Goal:** Understand the original mathematical problem.
+2.  **Analyze the Code and its Output:** Review the provided Python code and its successful execution output.
+3.  **Form a Verdict:** Determine if the output correctly and meaningfully solves the original problem. Is the result what was expected? Does it fully address the problem statement?
+4.  **Write a Brief Report:** Summarize your findings in a short analysis report. State your verdict clearly.
+
+### Original Problem ###
+{problem}
+
+### Python Code That Was Executed ###
+```python
+{code}
+```
+
+### Successful Execution Output ###
+```
+{output}
+```
+
+### Your Analysis Report ###

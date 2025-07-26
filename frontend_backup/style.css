@@ -1,0 +1,120 @@
+/* ... (existing styles) ... */
+
+/* --- Logic Tree Styles --- */
+.tree-container {
+    padding: 20px;
+}
+
+.tree ul {
+    padding-top: 20px; 
+    position: relative;
+    transition: all 0.5s;
+}
+
+.tree li {
+    float: left; 
+    text-align: center;
+    list-style-type: none;
+    position: relative;
+    padding: 20px 5px 0 5px;
+    transition: all 0.5s;
+}
+
+/* We use ::before and ::after to draw the connectors */
+.tree li::before, .tree li::after {
+    content: '';
+    position: absolute; 
+    top: 0; 
+    right: 50%;
+    border-top: 2px solid #ccc;
+    width: 50%; 
+    height: 20px;
+}
+.tree li::after {
+    right: auto; 
+    left: 50%;
+    border-left: 2px solid #ccc;
+}
+
+/* We need to remove left-right connectors from elements without parents */
+.tree > ul > li::before, .tree > ul > li::after {
+    border: 0;
+}
+
+/* Remove space from the last node */
+.tree li:last-child::before {
+    border-right: 2px solid #ccc;
+    border-radius: 0 5px 0 0;
+}
+.tree li:first-child::after {
+    border-radius: 5px 0 0 0;
+}
+
+/* Time to add downward connectors from parents */
+.tree ul ul::before {
+    content: '';
+    position: absolute; 
+    top: 0; 
+    left: 50%;
+    border-left: 2px solid #ccc;
+    width: 0; 
+    height: 20px;
+}
+
+.tree li span {
+    border: 2px solid #ccc;
+    padding: 8px 12px;
+    text-decoration: none;
+    color: #666;
+    font-family: arial, verdana, tahoma;
+    font-size: 12px;
+    display: inline-block;
+    border-radius: 8px;
+    transition: all 0.5s;
+    background-color: #fff;
+}
+
+/* Node Status Styles */
+.tree li span.active {
+    border-color: #007bff;
+    background-color: #e3f2fd;
+    transform: scale(1.05);
+}
+.tree li span.completed {
+    border-color: #28a745;
+    background-color: #d4edda;
+}
+.tree li span.failed {
+    border-color: #dc3545;
+    background-color: #f8d7da;
+}
+
+/* Decision Node Styles */
+.tree li.tree-decision > span {
+    border-radius: 25px; /* Make it oval */
+    background-color: #fff3cd;
+    border-color: #ffeaa7;
+}
+
+/* Branch Styles */
+.tree li.tree-branch-pass > span {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
+.tree li.tree-branch-fail > span {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+/* Hover effects */
+.tree li span:hover, .tree li span:hover+ul li span {
+    background: #e9ecef; 
+    color: #000; 
+    border: 2px solid #94a0b4;
+}
+.tree li span:hover+ul li::after, 
+.tree li span:hover+ul li::before, 
+.tree li span:hover+ul::before, 
+.tree li span:hover+ul ul::before {
+    border-color: #94a0b4;
+}

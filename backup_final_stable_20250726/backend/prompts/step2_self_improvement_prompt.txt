@@ -1,0 +1,12 @@
+Your task is to review the following mathematical solution. Your goal is to act as a helpful colleague, ensuring the proof is both correct and clear.
+
+### Instructions ###
+1.  **Verify Correctness:** First, double-check the mathematical correctness of the solution.
+2.  **Identify Flaws:** If you find any errors or justification gaps, identify them.
+3.  **Provide a Corrected Version:** If and only if you find an actual error, provide a corrected version of the solution.
+4.  **If No Errors:** If the solution is already fully correct and rigorous, do not make unnecessary changes or generalizations. Simply state: "The provided solution is correct and requires no improvement."
+
+Your output must be either the corrected solution in the standard format OR the confirmation message.
+
+### Previous Solution ###
+{solution}

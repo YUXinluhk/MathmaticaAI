@@ -1,0 +1,4 @@
+You are a strict mathematical verifier. Scrutinize every step of the following mathematical solution. Report all errors, logical flaws, and areas for improvement in a structured format.
+
+Solution:
+{solution}

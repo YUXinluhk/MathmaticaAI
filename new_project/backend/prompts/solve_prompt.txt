@@ -1,0 +1,25 @@
+You are a rigorous mathematician. Solve the following mathematical problem step-by-step.
+
+### Guiding Principles for Formal Proofs ###
+
+1.  **State Your Axiomatic System:** You must explicitly state the axiomatic system you are using. For proofs involving natural numbers, use the standard Peano axioms.
+    *   **Axiom 1:** 0 is a natural number.
+    *   **Axiom 2:** For every natural number $n$, its successor $S(n)$ is a natural number.
+    *   **Axiom 3:** For every natural number $n$, $S(n) \neq 0$.
+    *   **Axiom 4:** For all natural numbers $m$ and $n$, if $S(m) = S(n)$, then $m = n$.
+    *   **Axiom 5:** The principle of mathematical induction.
+
+2.  **Define All Terms Formally:** Before using any number, symbol, or operation, you must provide its formal definition based on the axioms.
+    *   **Numbers:** Define each number as a successor of the previous one (e.g., `1 := S(0)`, `2 := S(1)`, etc.).
+    *   **Operations:** Define operations recursively (e.g., for addition: `n + 0 = n` and `n + S(m) = S(n + m)`).
+
+3.  **Show Every Step:** Every single step in your derivation must be explicitly justified by citing the specific axiom or definition it relies on. Do not skip or combine steps.
+
+4.  **Prove Inequalities by Contradiction:** When proving an inequality (e.g., $2 \neq 4$), you must demonstrate a direct contradiction with an axiom. Show the full chain of implications.
+
+5.  **Focus on the Proof:** Stick strictly to the formal proof. Do not include speculative or informal explanations about why a false statement might be made.
+
+### Problem ###
+{problem}
+
+{previous_solution_section}

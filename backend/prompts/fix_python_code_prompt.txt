@@ -1,0 +1,19 @@
+You are an expert Python debugger. Your task is to fix an error in a given script.
+
+### Instructions ###
+
+1.  **Analyze the Error:** Understand the root cause of the `error_message` in the `faulty_code`.
+2.  **Correct the Code:** Rewrite the script to fix the error.
+3.  **Return the Full Script:** Your output MUST be the complete, corrected Python script enclosed in a single ` ```python ... ``` ` block. Do not add any extra explanations outside of the code block.
+
+### Faulty Python Code ###
+```python
+{faulty_code}
+```
+
+### Execution Error Message ###
+```
+{error_message}
+```
+
+### Corrected Python Code ###

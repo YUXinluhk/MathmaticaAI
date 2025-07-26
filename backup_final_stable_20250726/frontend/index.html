@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>严格数学验证系统 - AI-Python协作版 v2.1</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:,">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔬 严格数学验证系统</h1>
+            <p>基于论文逻辑的AI-Python协作验证框架 v2.1 (增强版)</p>
+        </div>
+
+        <div class="main-layout">
+            <div class="main-content">
+                <!-- Input Section -->
+                <div class="input-section">
+                    <div class="input-group">
+                        <label for="problem-input">📝 数学问题描述:</label>
+                        <textarea id="problem-input" placeholder="请输入需要严格验证的数学问题..."></textarea>
+                    </div>
+                    <button class="solve-btn" id="solve-button">🚀 启动严格验证流程</button>
+                    <button class="stop-btn" id="stop-button" style="display: none;">🛑 停止验证</button>
+                </div>
+
+                <!-- Verification Pipeline -->
+                <div class="verification-pipeline">
+                    <div class="pipeline-title">🔄 严格数学验证流程</div>
+                    <div class="verification-steps">
+                        <!-- This will be populated by script.js -->
+                    </div>
+                </div>
+                
+                <!-- Results Container -->
+                <div id="results-container"></div>
+            </div>
+
+            <div class="control-panel">
+                <!-- AI Config -->
+                <div class="config-section">
+                    <div class="config-title">🤖 AI配置</div>
+                    <div class="config-group">
+                        <label for="api-provider">API提供商:</label>
+                        <select id="api-provider">
+                            <option value="google">Google Gemini 1.5 Pro</option>
+                            <option value="openai">OpenAI GPT-4</option>
+                        </select>
+                    </div>
+                    <div class="config-group">
+                        <label for="model-version">模型版本:</label>
+                        <select id="model-version"></select>
+                    </div>
+                    <button class="config-btn" id="test-btn">🔗 测试连接 <span class="status-indicator status-disconnected" id="connection-status"></span></button>
+                </div>
+
+                <!-- Verification Config -->
+                <div class="config-section">
+                    <div class="config-title">⚙️ 验证配置</div>
+                    <div class="config-group">
+                        <label for="max-iterations">最大迭代次数:</label>
+                        <input type="number" id="max-iterations" value="8" min="3" max="15">
+                    </div>
+                    <div class="config-group">
+                        <label for="consecutive-passes-config">连续通过要求:</label>
+                        <input type="number" id="consecutive-passes-config" value="3" min="2" max="5">
+                    </div>
+                    <div class="config-group">
+                        <label for="verification-rigor">验证严格度:</label>
+                        <select id="verification-rigor">
+                            <option value="strict">严格 (推荐)</option>
+                            <option value="moderate">适中</option>
+                            <option value="lenient">宽松</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Verification Status -->
+                <div class="config-section" id="status-panel">
+                    <div class="config-title">📊 实时验证状态</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="status-item">
+                            <div id="current-iteration">0</div>
+                            <div class="status-label">当前迭代</div>
+                        </div>
+                        <div class="status-item">
+                            <div id="consecutive-passes">0</div>
+                            <div class="status-label">连续通过</div>
+                        </div>
+                        <div class="status-item">
+                            <div id="total-errors">0</div>
+                            <div class="status-label">发现错误</div>
+                        </div>
+                        <div class="status-item">
+                            <div id="python-validations">0</div>
+                            <div class="status-label">Python验证</div>
+                        </div>
+                        <div class="status-item">
+                            <div id="verification-score">--</div>
+                            <div class="status-label">验证得分</div>
+                        </div>
+                        <div class="status-item">
+                            <div id="error-count">0</div>
+                            <div class="status-label">错误数量</div>
+                        </div>
+                         <div class="status-item">
+                            <div id="python-executions">0</div>
+                            <div class="status-label">Python执行</div>
+                        </div>
+                        <div class="status-item">
+                            <div id="verification-confidence">--</div>
+                            <div class="status-label">置信度</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File Saving -->
+                <div class="save-section">
+                    <div class="config-title">💾 文件保存</div>
+                    <button class="config-btn" id="save-all-btn" style="margin-bottom: 8px;">📁 批量保存所有文件</button>
+                    <button class="config-btn" id="export-data-btn" style="margin-bottom: 8px;">📊 导出验证数据</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script id="MathJax-script" async src="js/lib/tex-mml-chtml.js"></script>
+    <script src="js/lib/jszip.min.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
