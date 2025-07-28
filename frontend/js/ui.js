@@ -76,15 +76,52 @@ window.app.ui = {
         }
     },
 
-    showNotification: function(message, type = 'info', duration = 3000) {
+    showNotification: function(message, type = 'info', duration = 5000) {
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
-        notification.innerHTML = `<span>${message}</span>`;
+
+        let content = '';
+        if (typeof message === 'object' && message.message) {
+            // Structured error object
+            content = `
+                <strong>${message.error_code || 'Error'}</strong>
+                <p>${message.message}</p>
+                ${message.suggestion ? `<p><em>Suggestion: ${message.suggestion}</em></p>` : ''}
+            `;
+        } else {
+            // Simple string message
+            content = `<span>${message}</span>`;
+        }
+
+        notification.innerHTML = content;
         document.body.appendChild(notification);
-        setTimeout(() => notification.classList.add('show'), 10);
-        setTimeout(() => {
+
+        // Add a close button
+        const closeButton = document.createElement('button');
+        closeButton.innerHTML = '&times;';
+        closeButton.className = 'notification-close-btn';
+        closeButton.onclick = () => {
             notification.classList.remove('show');
-            setTimeout(() => document.body.removeChild(notification), 500);
+            setTimeout(() => {
+                if (document.body.contains(notification)) {
+                    document.body.removeChild(notification);
+                }
+            }, 500);
+        };
+        notification.appendChild(closeButton);
+
+        setTimeout(() => notification.classList.add('show'), 10);
+
+        // Auto-hide after duration
+        setTimeout(() => {
+            if (document.body.contains(notification)) {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 500);
+            }
         }, duration);
     },
 

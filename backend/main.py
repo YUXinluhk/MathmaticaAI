@@ -3,7 +3,8 @@ import requests
 import traceback
 import configparser
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Response, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Response, BackgroundTasks, Request
+from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
@@ -24,6 +25,23 @@ import scipy
 import matplotlib.pyplot as plt
 import google.generativeai as genai
 
+# --- Error Handling ---
+class AppError(Exception):
+    def __init__(self, error_code: str, message: str, suggestion: str = "No suggestion provided."):
+        self.error_code = error_code
+        self.message = message
+        self.suggestion = suggestion
+        super().__init__(self.message)
+
+# Define specific error codes
+class ErrorCodes:
+    AI_API_TIMEOUT = "AI_API_TIMEOUT"
+    AI_API_ERROR = "AI_API_ERROR"
+    FILE_NOT_FOUND = "FILE_NOT_FOUND"
+    PYTHON_EXECUTION_ERROR = "PYTHON_EXECUTION_ERROR"
+    INVALID_INPUT = "INVALID_INPUT"
+    UNKNOWN_ERROR = "UNKNOWN_ERROR"
+
 # --- Config Parser Setup ---
 config = configparser.ConfigParser()
 config.read('backend/config.ini')
@@ -32,6 +50,29 @@ config.read('backend/config.ini')
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+@app.exception_handler(AppError)
+async def app_exception_handler(request: Request, exc: AppError):
+    return JSONResponse(
+        status_code=400, # Using 400 for client errors, can be adjusted
+        content={
+            "error_code": exc.error_code,
+            "message": exc.message,
+            "suggestion": exc.suggestion,
+        },
+    )
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error_code": ErrorCodes.UNKNOWN_ERROR,
+            "message": "An unexpected server error occurred.",
+            "suggestion": "Please contact support or try again later.",
+            "detail": str(exc) # Optional: for debugging
+        },
+    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -91,13 +132,22 @@ class LatexReportRequest(BaseModel):
 # --- Prompt Loading ---
 def load_prompt(filename: str, data: Dict[str, Any], base_folder: str = "prompts") -> str:
     try:
-        with open(os.path.join(base_folder, filename), "r", encoding="utf-8") as f:
+        filepath = os.path.join(base_folder, filename)
+        with open(filepath, "r", encoding="utf-8") as f:
             prompt_template = f.read()
         return prompt_template.format(**data)
     except FileNotFoundError:
-        raise HTTPException(status_code=500, detail=f"Prompt file not found: {filename} in {base_folder}")
+        raise AppError(
+            error_code=ErrorCodes.FILE_NOT_FOUND,
+            message=f"Prompt file not found: {filename}",
+            suggestion="Please check that the prompt files exist in the correct directory."
+        )
     except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Missing data for prompt placeholder: {e}")
+        raise AppError(
+            error_code=ErrorCodes.INVALID_INPUT,
+            message=f"Missing data for prompt placeholder: {e}",
+            suggestion="Ensure all required data fields are provided for the prompt."
+        )
 
 
 # --- AI Call Handlers ---
@@ -118,9 +168,23 @@ async def call_gemini_api(model: str, prompt: str) -> str:
         if response.parts:
             return "".join(part.text for part in response.parts)
         else:
-            return "Error: The AI model did not provide a valid response."
+            raise AppError(
+                error_code=ErrorCodes.AI_API_ERROR,
+                message="The AI model did not provide a valid response.",
+                suggestion="The model's response was empty. This might be a temporary issue. Please try again."
+            )
+    except requests.exceptions.Timeout:
+        raise AppError(
+            error_code=ErrorCodes.AI_API_TIMEOUT,
+            message="Google GenAI API request timed out.",
+            suggestion="The request took too long to complete. Check your network connection or try again later."
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Google GenAI Error: {str(e)}\n{traceback.format_exc()}")
+        raise AppError(
+            error_code=ErrorCodes.AI_API_ERROR,
+            message=f"Google GenAI Error: {str(e)}",
+            suggestion="An unexpected error occurred with the Google GenAI API. Check API keys and service status."
+        )
 
 async def call_openai_api(model: str, prompt: str) -> str:
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {OPENAI_API_KEY}"}
@@ -129,8 +193,18 @@ async def call_openai_api(model: str, prompt: str) -> str:
         response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=json_payload, timeout=120)
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
+    except requests.exceptions.Timeout:
+        raise AppError(
+            error_code=ErrorCodes.AI_API_TIMEOUT,
+            message="OpenAI API request timed out.",
+            suggestion="The request took too long to complete. Check your network connection or try again later."
+        )
     except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"OpenAI API Error: {str(e)}\n{traceback.format_exc()}")
+        raise AppError(
+            error_code=ErrorCodes.AI_API_ERROR,
+            message=f"OpenAI API Error: {str(e)}",
+            suggestion="An error occurred with the OpenAI API. Check your API key, model name, and network status."
+        )
 
 async def call_deepseek_api(model: str, prompt: str) -> str:
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {DEEPSEEK_API_KEY}"}
@@ -139,8 +213,18 @@ async def call_deepseek_api(model: str, prompt: str) -> str:
         response = requests.post("https://api.deepseek.com/v1/chat/completions", headers=headers, json=json_payload, timeout=120)
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
+    except requests.exceptions.Timeout:
+        raise AppError(
+            error_code=ErrorCodes.AI_API_TIMEOUT,
+            message="DeepSeek API request timed out.",
+            suggestion="The request took too long to complete. Check your network connection or try again later."
+        )
     except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"DeepSeek API Error: {str(e)}\n{traceback.format_exc()}")
+        raise AppError(
+            error_code=ErrorCodes.AI_API_ERROR,
+            message=f"DeepSeek API Error: {str(e)}",
+            suggestion="An error occurred with the DeepSeek API. Check your API key, model name, and network status."
+        )
 
 
 # --- API Endpoints ---
@@ -153,12 +237,16 @@ async def test_connection(request: ConnectionTestRequest):
     }
     url = urls.get(request.provider)
     if not url:
-        raise HTTPException(status_code=400, detail="Invalid provider.")
+        raise AppError(error_code=ErrorCodes.INVALID_INPUT, message="Invalid provider.")
     try:
         requests.get(url, timeout=10)
         return {"status": "success", "provider": request.provider, "message": f"Successfully connected to {request.provider}."}
     except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"Connection to {request.provider} failed: {str(e)}")
+        raise AppError(
+            error_code=ErrorCodes.AI_API_ERROR,
+            message=f"Connection to {request.provider} failed: {str(e)}",
+            suggestion="Could not connect to the AI provider. Check your network or the provider's status page."
+        )
 
 @app.post("/api/call-ai")
 async def call_ai_endpoint(request: AIRequest):
@@ -242,8 +330,8 @@ async def generate_latex_report(request: LatexReportRequest):
 
 
 from fastapi import UploadFile, File
-from workflow import run_engineering_workflow
-from optimization_workflow import run_optimization_workflow
+from .workflow import run_engineering_workflow
+from .optimization_workflow import run_optimization_workflow
 
 class WorkflowRequest(BaseModel):
     provider: str
@@ -282,6 +370,7 @@ class StepModelRequest(BaseModel):
     problem: str
     parameters: Dict[str, Any]
     knowledge_base: Optional[str] = None
+    # No revision needed here as the 'problem' field is the editable content
 
 class StepGenerateScriptRequest(BaseModel):
     provider: str
@@ -289,6 +378,7 @@ class StepGenerateScriptRequest(BaseModel):
     modeling_result: str
     parameters: Dict[str, Any]
     knowledge_base: Optional[str] = None
+    revised_content: Optional[str] = None
 
 class StepExecuteRequest(BaseModel):
     script: str
@@ -304,10 +394,17 @@ class StepSynthesizeRequest(BaseModel):
 
 @app.post("/api/step/model")
 async def step_model(request: StepModelRequest):
+    """
+    Handles the modeling step. The 'problem' field can be the original
+    or user-revised problem description.
+    """
     knowledge_section = f"**Background Knowledge:**\n---\n{request.knowledge_base}\n---\n" if request.knowledge_base else ""
     modeling_prompt = f"{knowledge_section}**Your Task:**\nProblem: {request.problem}\nParameters: {json.dumps(request.parameters)}"
+
+    # AI generates the model based on the (potentially revised) problem
     modeling_result = await call_ai_provider(request.provider, request.model, modeling_prompt)
 
+    # AI reviews its own generated model
     review_prompt = f"{knowledge_section}**Your Task:**\nReview the following modeling result:\n{modeling_result}"
     ai_review = await call_ai_provider(request.provider, request.model, review_prompt)
 
@@ -315,11 +412,21 @@ async def step_model(request: StepModelRequest):
 
 @app.post("/api/step/generate-script")
 async def step_generate_script(request: StepGenerateScriptRequest):
+    """
+    Handles the script generation step. It can either generate a new script
+    or use a user-revised script.
+    """
     knowledge_section = f"**Background Knowledge:**\n---\n{request.knowledge_base}\n---\n" if request.knowledge_base else ""
-    script_prompt = f"{knowledge_section}**Your Task:**\nBased on the modeling result, generate a simulation script.\nModeling Result:\n{request.modeling_result}\nParameters: {json.dumps(request.parameters)}"
-    simulation_script = await call_ai_provider(request.provider, request.model, script_prompt)
 
-    review_prompt = f"{knowledge_section}**Your Task:**\nReview the following generated script:\n{simulation_script}"
+    # If user provides revised content, use it. Otherwise, generate from AI.
+    if request.revised_content:
+        simulation_script = request.revised_content
+    else:
+        script_prompt = f"{knowledge_section}**Your Task:**\nBased on the modeling result, generate a simulation script.\nModeling Result:\n{request.modeling_result}\nParameters: {json.dumps(request.parameters)}"
+        simulation_script = await call_ai_provider(request.provider, request.model, script_prompt)
+
+    # AI always reviews the script that is being passed to the next step
+    review_prompt = f"{knowledge_section}**Your Task:**\nReview the following generated script:\n```python\n{simulation_script}\n```"
     ai_review = await call_ai_provider(request.provider, request.model, review_prompt)
 
     return {"computational_result": simulation_script, "ai_review": ai_review}
@@ -331,7 +438,11 @@ async def step_execute(request: StepExecuteRequest):
     execution_result = agent.run(request.script, request.parameters, request.data_filepath)
 
     if not execution_result.success:
-        raise HTTPException(status_code=400, detail=f"Python execution failed: {execution_result.error}")
+        raise AppError(
+            error_code=ErrorCodes.PYTHON_EXECUTION_ERROR,
+            message=f"Python execution failed: {execution_result.error}",
+            suggestion="The Python script failed to execute. Check the script for errors and try again."
+        )
 
     # This is a placeholder for AI review of the execution
     ai_review = "AI analysis of the execution result would go here."

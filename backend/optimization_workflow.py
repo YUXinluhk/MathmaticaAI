@@ -1,8 +1,8 @@
 import json
 from typing import Dict, Any
 from fastapi import HTTPException
-from main import call_ai_provider, load_prompt
-from workflow import run_engineering_workflow
+from .main import call_ai_provider, load_prompt
+from .workflow import run_engineering_workflow
 
 async def run_optimization_workflow(
     provider: str,

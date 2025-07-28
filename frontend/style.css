@@ -288,3 +288,16 @@ pre {
 .notification.error { background-color: #dc3545; }
 .notification.warning { background-color: #ffc107; color: #333; }
 .notification.info { background-color: #17a2b8; }
+
+.notification-close-btn {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: inherit;
+    cursor: pointer;
+    padding: 5px;
+    line-height: 1;
+}

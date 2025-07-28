@@ -33,7 +33,8 @@ window.app.handlers = {
             window.app.state.workflow.history['step-model'] = result;
             this.displayStepResult('step-model', result);
         } catch (error) {
-            window.app.ui.showNotification(`Error in modeling step: ${error.message}`, 'error');
+            const errorMessage = error.isAppError ? error.errorData : `Error in modeling step: ${error.message}`;
+            window.app.ui.showNotification(errorMessage, 'error');
         }
     },
 
@@ -44,9 +45,65 @@ window.app.handlers = {
                 this.proceedToNextStep(nextStep);
             }
         } else if (event.target.classList.contains('revise-btn')) {
-            // Handle revision logic here
-            window.app.ui.showNotification('Revision requested. Please edit the inputs and restart.', 'info');
+            const resultSection = event.target.closest('.result-section');
+            const contentElement = resultSection.querySelector('.result-content-editable');
+            const buttonContainer = resultSection.querySelector('.approval-buttons');
+            const step = resultSection.id.replace('result-', '');
+
+            if (contentElement && buttonContainer) {
+                contentElement.setAttribute('contenteditable', 'true');
+                contentElement.style.backgroundColor = '#f0f0f0';
+                contentElement.focus();
+
+                buttonContainer.innerHTML = '<button class="resubmit-btn">Resubmit Revision</button>';
+
+                buttonContainer.querySelector('.resubmit-btn').addEventListener('click', async () => {
+                    const revisedContent = contentElement.innerText; // Use innerText to get user's edits
+                    contentElement.setAttribute('contenteditable', 'false');
+                    contentElement.style.backgroundColor = '';
+                    buttonContainer.innerHTML = 'Re-processing...';
+
+                    try {
+                        await this.resubmitStep(step, revisedContent);
+                    } catch (error) {
+                        const errorMessage = error.isAppError ? error.errorData : `Error resubmitting step: ${error.message}`;
+                        window.app.ui.showNotification(errorMessage, 'error');
+                        // Restore buttons on failure
+                        const buttons = window.app.ui.createApprovalButtons(step);
+                        buttonContainer.innerHTML = '';
+                        buttonContainer.appendChild(buttons);
+                    }
+                });
+            }
         }
+    },
+
+    resubmitStep: async function(step, revisedContent) {
+        window.app.ui.showNotification(`Resubmitting ${step} with revisions...`, 'info');
+
+        const provider = window.app.state.systemState.aiConfig.provider;
+        const model = window.app.state.systemState.aiConfig.model;
+        const parameters = window.app.parameters.getParameters();
+        const knowledgeBase = this.getKnowledgeBaseContent();
+        const history = window.app.state.workflow.history;
+
+        let result;
+        if (step === 'step-model') {
+            result = await window.app.api.stepModel(provider, model, revisedContent, parameters, knowledgeBase);
+        } else if (step === 'step-generate-script') {
+            const modelingResult = history['step-model'].computational_result;
+            result = await window.app.api.stepGenerateScript(provider, model, modelingResult, parameters, knowledgeBase, revisedContent);
+        }
+        // Add other steps as needed
+
+        window.app.state.workflow.history[step] = result;
+
+        // Remove the old result div and display the new one
+        const oldResultDiv = document.getElementById(`result-${step}`);
+        if(oldResultDiv) oldResultDiv.remove();
+
+        this.displayStepResult(step, result);
+        this.updateActiveSession();
     },
 
     proceedToNextStep: async function(step) {
@@ -85,7 +142,8 @@ window.app.handlers = {
             this.updateActiveSession();
 
         } catch (error) {
-            window.app.ui.showNotification(`Error in ${step}: ${error.message}`, 'error');
+            const errorMessage = error.isAppError ? error.errorData : `Error in ${step}: ${error.message}`;
+            window.app.ui.showNotification(errorMessage, 'error');
         }
     },
 
@@ -97,10 +155,12 @@ window.app.handlers = {
 
         let contentHtml = '';
         if (result.computational_result) {
-            if (typeof result.computational_result === 'object') {
+             if (typeof result.computational_result === 'object') {
+                // Non-editable objects
                 contentHtml += `<h4>Computational Result:</h4><pre>${JSON.stringify(result.computational_result, null, 2)}</pre>`;
             } else {
-                contentHtml += `<h4>Computational Result:</h4><div class="result-content">${window.app.utils.markdownToHtml(result.computational_result)}</div>`;
+                // Editable text content
+                contentHtml += `<h4>Computational Result:</h4><div class="result-content-editable">${window.app.utils.markdownToHtml(result.computational_result)}</div>`;
             }
         }
         if (result.ai_review) {

@@ -32,3 +32,17 @@ The platform is built with a modern web stack and a powerful backend:
 5. **Start Simulation**: Click the "开始建模与仿真" (Start Modeling & Simulation) button.
 6. **View Results**: The platform will display the results of each step of the workflow, including the physical model, simulation script, execution results, and analysis.
 7. **Generate Report**: Once the simulation is complete, you can generate a LaTeX report of the results.
+
+## Running Tests
+
+To run the backend unit tests, navigate to the `backend` directory and install the required dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+Then, from the root directory of the project, run pytest:
+
+```bash
+pytest
+```

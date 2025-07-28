@@ -3,10 +3,10 @@ from typing import Dict, Any
 
 from fastapi import HTTPException
 
-from agents import PythonAgent
-from MATLABAgent import MATLABAgent
-from AbaqusAgent import AbaqusAgent
-from main import call_ai_provider
+from .agents import PythonAgent
+from .MATLABAgent import MATLABAgent
+from .AbaqusAgent import AbaqusAgent
+from .main import call_ai_provider
 
 
 async def run_engineering_workflow(

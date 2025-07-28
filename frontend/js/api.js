@@ -84,9 +84,9 @@ window.app.api = {
         return this.post(url, requestBody);
     },
 
-    stepGenerateScript: async function(provider, model, modeling_result, parameters) {
+    stepGenerateScript: async function(provider, model, modeling_result, parameters, knowledgeBase, revised_content = null) {
         const url = `${this.BASE_URL}/api/step/generate-script`;
-        const requestBody = { provider, model, modeling_result, parameters };
+        const requestBody = { provider, model, modeling_result, parameters, knowledge_base: knowledgeBase, revised_content: revised_content };
         return this.post(url, requestBody);
     },
 
@@ -110,12 +110,23 @@ window.app.api = {
                 body: JSON.stringify(body)
             });
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || `API Error: ${response.status}`);
+                // Try to parse the structured error, but have a fallback
+                try {
+                    const errorData = await response.json();
+                    // Create an error object that includes the structured data
+                    const error = new Error(errorData.message || 'API request failed');
+                    error.isAppError = true;
+                    error.errorData = errorData;
+                    throw error;
+                } catch (e) {
+                    // If parsing fails, throw a generic error
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
             }
             return await response.json();
         } catch (error) {
             console.error(`API call to ${url} failed:`, error);
+            // Re-throw the error so the calling function can handle it
             throw error;
         }
     },
