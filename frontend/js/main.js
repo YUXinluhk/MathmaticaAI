@@ -5,4 +5,5 @@ document.addEventListener('DOMContentLoaded', () => {
     window.app.state.initializeState();
     window.app.ui.initializeUI();
     window.app.handlers.initializeEventListeners();
+    window.app.parameters.initialize();
 });

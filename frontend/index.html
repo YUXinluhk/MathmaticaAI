@@ -22,6 +22,13 @@
                         <label for="problem-input">📝 问题描述:</label>
                         <textarea id="problem-input" placeholder="请输入工程问题..."></textarea>
                     </div>
+                    <div class="input-group">
+                        <label>🔩 物理参数:</label>
+                        <div id="parameters-container">
+                            <!-- Parameter rows will be inserted here -->
+                        </div>
+                        <button class="add-btn" id="add-parameter-btn">+ 添加参数</button>
+                    </div>
                     <button class="solve-btn" id="solve-button">🚀 开始建模与仿真</button>
                 </div>
 
@@ -160,6 +167,8 @@
     <script src="js/api/api.js?v=1.8"></script>
     <script src="js/core/verification.js?v=1.8"></script>
     <script src="js/handlers/handlers.js?v=1.8"></script>
+    <script src="js/parameters.js?v=1.8"></script>
+    <script src="js/handlers.js?v=1.8"></script>
     <script src="js/main.js?v=1.8"></script>
 </body>
 </html>

@@ -56,6 +56,7 @@ class AIRequest(BaseModel):
     model: str
     task: str
     data: Dict[str, Any]
+    parameters: Optional[Dict[str, Any]] = None
 
 class ExecuteRequest(BaseModel):
     code: str
@@ -175,6 +176,7 @@ async def call_ai_endpoint(request: AIRequest):
         "model_review": ("prompts_applied", "step2_model_review_prompt.txt"),
         "simulation_script": ("prompts_applied", "step3_simulation_script_prompt.txt"),
         "synthesis": ("prompts_applied", "step4_synthesis_prompt.txt"),
+        "plot_analysis": ("prompts_applied", "step5_plot_analysis_prompt.txt"),
     }
     
     prompt_info = prompt_file_map.get(request.task)
@@ -183,6 +185,8 @@ async def call_ai_endpoint(request: AIRequest):
 
     base_folder, prompt_filename = prompt_info
     prompt_data = {k: v for k, v in request.data.items() if v is not None}
+    if request.parameters:
+        prompt_data['parameters'] = str(request.parameters)
     prompt = load_prompt(prompt_filename, prompt_data, base_folder=base_folder)
     
     response_text = await call_ai_provider(request.provider, request.model, prompt)
@@ -260,6 +264,23 @@ async def generate_latex_report(request: LatexReportRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate LaTeX report: {str(e)}\n{traceback.format_exc()}")
 
+
+from workflow import run_engineering_workflow
+
+class WorkflowRequest(BaseModel):
+    provider: str
+    model: str
+    problem: str
+    parameters: Dict[str, Any]
+
+@app.post("/api/run-workflow")
+async def run_workflow_endpoint(request: WorkflowRequest):
+    return await run_engineering_workflow(
+        request.provider,
+        request.model,
+        request.problem,
+        request.parameters,
+    )
 
 if __name__ == "__main__":
     import uvicorn

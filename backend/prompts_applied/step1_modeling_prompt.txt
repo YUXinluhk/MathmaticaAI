@@ -4,7 +4,8 @@ You are a senior structural engineer. Your task is to analyze the user's problem
 3.  **Derive Governing Differential Equation:** Derive the governing differential equation for the model.
 4.  **Determine Boundary Conditions:** Specify the boundary conditions for the differential equation.
 
-**Example Problem:** A cantilever beam of length L, with a constant Young's modulus E and moment of inertia I, is subjected to a concentrated downward force F at its free end.
+**Example Problem:** A cantilever beam problem with the following parameters:
+{parameters}
 
 **Example Output:**
 

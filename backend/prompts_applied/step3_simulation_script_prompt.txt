@@ -12,13 +12,16 @@ You are a computational mechanics expert. Your task is to write a Python script 
     *   `dw/dx(0) = 0`
     *   `d^2w/dx^2(L) = 0`
     *   `d^3w/dx^3(L) = -F/(EI)`
-*   Parameters: L=10, E=210e9, I=1e-5, F=1000
+*   Parameters: {parameters}
 
 **Example Output:**
 ```python
 import sympy
 import numpy as np
 import matplotlib.pyplot as plt
+
+# Parameters
+params = {parameters}
 
 # 1. Symbolic Solution
 x = sympy.symbols('x')
@@ -27,7 +30,7 @@ E, I, L, F = sympy.symbols('E I L F')
 ode = sympy.Eq(E * I * w.diff(x, 4), 0)
 sol = sympy.dsolve(ode, w)
 C1, C2, C3, C4 = sympy.symbols('C1 C2 C3 C4')
-constants = {C1: sol.rhs.args[0].args[0], C2: sol.rhs.args[1].args[0], C3: sol.rhs.args[2].args[0], C4: sol.rhs.args[3].args[0]}
+constants = {{C1: sol.rhs.args[0].args[0], C2: sol.rhs.args[1].args[0], C3: sol.rhs.args[2].args[0], C4: sol.rhs.args[3].args[0]}}
 
 # Apply boundary conditions
 bc1 = sympy.Eq(sol.rhs.subs(x, 0), 0)
@@ -41,11 +44,11 @@ final_solution = sol.rhs.subs(solved_constants)
 
 # 2. Numerical Solution
 # Substitute numerical values
-final_solution_numerical = final_solution.subs({L: 10, E: 210e9, I: 1e-5, F: 1000})
+final_solution_numerical = final_solution.subs(params)
 w_func = sympy.lambdify(x, final_solution_numerical, 'numpy')
 
 # 3. Visualization
-x_vals = np.linspace(0, 10, 101)
+x_vals = np.linspace(0, params['L'], 101)
 w_vals = w_func(x_vals)
 
 plt.figure()
