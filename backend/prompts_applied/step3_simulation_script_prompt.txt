@@ -5,6 +5,8 @@ You are a computational mechanics expert. Your task is to write a Python script 
 2.  **Numerical Solution:** Convert the symbolic solution into a numerical function that can be evaluated.
 3.  **Visualization:** Use `numpy` and `matplotlib` to plot the solution. The plot should be clearly labeled with a title, axis labels, and units.
 
+**Important:** If you use content from the 'Background Knowledge', you must cite it by adding a `[source]` marker at the end of the sentence.
+
 **Example Input:**
 *   Governing Differential Equation: `EI * d^4w/dx^4 = 0`
 *   Boundary Conditions:

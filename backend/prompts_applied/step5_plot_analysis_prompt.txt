@@ -6,6 +6,8 @@ You are an AI data analyst. Your task is to analyze the provided plot and extrac
 3.  **Interpret the Results:** Translate the mathematical and numerical results into physical insights. What does the plot tell you about the behavior of the system?
 4.  **Provide a Conclusion:** Summarize the main conclusions that can be drawn from the analysis.
 
+**Important:** If you use content from the 'Background Knowledge', you must cite it by adding a `[source]` marker at the end of the sentence.
+
 **Example Input:**
 *   A plot showing the deflection of a cantilever beam.
 

@@ -4,6 +4,41 @@ window.app.ui = {
     initializeUI: function() {
         this.updateModelOptions();
         this.updateConnectionStatus();
+        this.initializeCitationTooltips();
+    },
+
+    initializeCitationTooltips: function() {
+        const resultsContainer = document.getElementById('results-container');
+        let tooltip = null;
+
+        resultsContainer.addEventListener('mouseover', (event) => {
+            if (event.target.classList.contains('citation')) {
+                const resultSection = event.target.closest('.result-section');
+                if (!resultSection || !resultSection.dataset.citations) return;
+
+                const citations = JSON.parse(resultSection.dataset.citations);
+                const sourceIndex = parseInt(event.target.dataset.sourceIndex, 10);
+                const citation = citations.find(c => c.id === sourceIndex);
+
+                if (citation) {
+                    tooltip = document.createElement('div');
+                    tooltip.className = 'citation-tooltip';
+                    tooltip.innerHTML = `<strong>Source:</strong><p>${citation.text}</p>`;
+                    document.body.appendChild(tooltip);
+
+                    const rect = event.target.getBoundingClientRect();
+                    tooltip.style.left = `${rect.left}px`;
+                    tooltip.style.top = `${rect.bottom + 5}px`;
+                }
+            }
+        });
+
+        resultsContainer.addEventListener('mouseout', (event) => {
+            if (event.target.classList.contains('citation') && tooltip) {
+                tooltip.remove();
+                tooltip = null;
+            }
+        });
     },
 
     updateModelOptions: function() {
@@ -194,5 +229,45 @@ window.app.ui = {
             fileItem.textContent = file.filename;
             fileList.appendChild(fileItem);
         });
+    },
+
+    displayStepResult: function(step, result) {
+        const resultsContainer = document.getElementById('results-container');
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'result-section';
+        resultDiv.id = `result-${step}`;
+
+        let contentHtml = '';
+        if (result.computational_result) {
+             if (typeof result.computational_result === 'object') {
+                // Non-editable objects
+                contentHtml += `<h4>Computational Result:</h4><pre>${JSON.stringify(result.computational_result, null, 2)}</pre>`;
+            } else {
+                // Editable text content, now includes citations
+                contentHtml += `<h4>Computational Result:</h4><div class="result-content-editable">${result.computational_result}</div>`;
+            }
+        }
+        if (result.ai_review) {
+            contentHtml += `<h4>AI Review:</h4><div class="result-content">${result.ai_review}</div>`;
+        }
+        if (result.synthesis_report) {
+            contentHtml += `<h4>Synthesis Report:</h4><div class="result-content">${result.synthesis_report}</div>`;
+        }
+
+        // Store citations in the element's dataset for the tooltip handler
+        if (result.citations && result.citations.length > 0) {
+            resultDiv.dataset.citations = JSON.stringify(result.citations);
+        }
+
+        resultDiv.innerHTML = contentHtml;
+
+        const nextStep = window.app.state.workflow.getNextStep(step);
+        if (nextStep) {
+            const buttons = window.app.ui.createApprovalButtons(step);
+            resultDiv.appendChild(buttons);
+        }
+
+        resultsContainer.appendChild(resultDiv);
+        resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 };

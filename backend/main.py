@@ -97,6 +97,8 @@ if GEMINI_API_KEY:
         print(f"Warning: Failed to configure Google GenAI client: {e}")
 
 
+import re
+
 # --- Pydantic Models ---
 class AIRequest(BaseModel):
     provider: str
@@ -332,6 +334,7 @@ async def generate_latex_report(request: LatexReportRequest):
 from fastapi import UploadFile, File
 from .workflow import run_engineering_workflow
 from .optimization_workflow import run_optimization_workflow
+from .knowledge import knowledge_base_instance
 
 class WorkflowRequest(BaseModel):
     provider: str
@@ -355,14 +358,18 @@ async def upload_data(file: UploadFile = File(...)):
         temp_file.write(await file.read())
         return {"filepath": temp_file.name}
 
-@app.post("/api/knowledge/upload")
-async def upload_knowledge(file: UploadFile = File(...)):
-    # For simplicity, we'll save it to a temp file.
-    # In a real application, you'd want to manage this more robustly,
-    # perhaps associating it with a user session.
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".tmp") as temp_file:
-        temp_file.write(await file.read())
-        return {"filepath": temp_file.name, "filename": file.filename}
+@app.post("/api/knowledge/process")
+async def process_knowledge(file: UploadFile = File(...)):
+    """
+    Processes an uploaded knowledge file, chunks it, and adds it to the knowledge base.
+    """
+    try:
+        content = await file.read()
+        text = content.decode('utf-8')
+        knowledge_base_instance.add_document(text)
+        return {"status": "success", "filename": file.filename, "chunks_added": len(knowledge_base_instance.chunks)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to process knowledge file: {str(e)}")
 
 class StepModelRequest(BaseModel):
     provider: str
@@ -392,31 +399,90 @@ class StepSynthesizeRequest(BaseModel):
     knowledge_base: Optional[str] = None
 
 
+def process_citations(text: str, knowledge_base: str) -> (str, list):
+    """
+    Processes the AI's response to replace [source] markers with citation spans
+    and extracts the cited sources from the knowledge base.
+    """
+    if not knowledge_base:
+        return text, []
+
+    # Split knowledge base into sentences for matching
+    knowledge_sentences = re.split(r'(?<=[.!?])\s+', knowledge_base)
+
+    citations = []
+    processed_text = text
+
+    # Find all sentences ending with the [source] marker
+    # The regex looks for a sentence ending with punctuation, optional whitespace, and then the marker.
+    source_pattern = r'([^.!?]*[.!?])(\s*\[source\])'
+
+    matches = list(re.finditer(source_pattern, text, re.IGNORECASE))
+
+    # Reverse matches to not mess up indices when replacing
+    for i, match in enumerate(reversed(matches)):
+        cited_sentence_ai = match.group(1).strip()
+
+        # Find the best matching sentence in the knowledge base
+        # This is a simple substring search. More advanced methods could be used.
+        best_match = None
+        highest_similarity = 0.0
+
+        for kb_sentence in knowledge_sentences:
+            # Simple similarity check
+            if cited_sentence_ai.lower() in kb_sentence.lower():
+                similarity = len(cited_sentence_ai) / len(kb_sentence)
+                if similarity > highest_similarity:
+                    highest_similarity = similarity
+                    best_match = kb_sentence
+
+        source_text = best_match if best_match else "Source not found in knowledge base."
+
+        # Add to citations list if not already present
+        if source_text not in [c['text'] for c in citations]:
+            citations.append({"id": len(citations) + 1, "text": source_text})
+
+        citation_index = next((c['id'] for c in citations if c['text'] == source_text), 0)
+
+        # Replace the [source] marker with a span
+        replacement_html = f'<span class="citation" data-source-index="{citation_index}">{citation_index}</span>'
+
+        # Replace the specific match in the text
+        start, end = match.span(2)
+        processed_text = processed_text[:start] + replacement_html + processed_text[end:]
+
+    return processed_text, citations
+
+
 @app.post("/api/step/model")
 async def step_model(request: StepModelRequest):
     """
-    Handles the modeling step. The 'problem' field can be the original
-    or user-revised problem description.
+    Handles the modeling step, now with RAG.
     """
-    knowledge_section = f"**Background Knowledge:**\n---\n{request.knowledge_base}\n---\n" if request.knowledge_base else ""
+    relevant_chunks = knowledge_base_instance.get_relevant_chunks(request.problem)
+    knowledge_section = f"**Background Knowledge:**\n---\n{''.join(relevant_chunks)}\n---\n" if relevant_chunks else ""
+
     modeling_prompt = f"{knowledge_section}**Your Task:**\nProblem: {request.problem}\nParameters: {json.dumps(request.parameters)}"
 
-    # AI generates the model based on the (potentially revised) problem
-    modeling_result = await call_ai_provider(request.provider, request.model, modeling_prompt)
+    # AI generates the model
+    modeling_result_raw = await call_ai_provider(request.provider, request.model, modeling_prompt)
+    modeling_result, citations1 = process_citations(modeling_result_raw, "\n".join(relevant_chunks))
 
     # AI reviews its own generated model
     review_prompt = f"{knowledge_section}**Your Task:**\nReview the following modeling result:\n{modeling_result}"
-    ai_review = await call_ai_provider(request.provider, request.model, review_prompt)
+    ai_review_raw = await call_ai_provider(request.provider, request.model, review_prompt)
+    ai_review, citations2 = process_citations(ai_review_raw, "\n".join(relevant_chunks))
 
-    return {"computational_result": modeling_result, "ai_review": ai_review}
+    return {"computational_result": modeling_result, "ai_review": ai_review, "citations": citations1 + citations2}
 
 @app.post("/api/step/generate-script")
 async def step_generate_script(request: StepGenerateScriptRequest):
     """
-    Handles the script generation step. It can either generate a new script
-    or use a user-revised script.
+    Handles the script generation step, now with RAG.
     """
-    knowledge_section = f"**Background Knowledge:**\n---\n{request.knowledge_base}\n---\n" if request.knowledge_base else ""
+    query = request.modeling_result
+    relevant_chunks = knowledge_base_instance.get_relevant_chunks(query)
+    knowledge_section = f"**Background Knowledge:**\n---\n{''.join(relevant_chunks)}\n---\n" if relevant_chunks else ""
 
     # If user provides revised content, use it. Otherwise, generate from AI.
     if request.revised_content:
@@ -427,9 +493,11 @@ async def step_generate_script(request: StepGenerateScriptRequest):
 
     # AI always reviews the script that is being passed to the next step
     review_prompt = f"{knowledge_section}**Your Task:**\nReview the following generated script:\n```python\n{simulation_script}\n```"
-    ai_review = await call_ai_provider(request.provider, request.model, review_prompt)
+    ai_review_raw = await call_ai_provider(request.provider, request.model, review_prompt)
+    ai_review, citations = process_citations(ai_review_raw, "\n".join(relevant_chunks))
 
-    return {"computational_result": simulation_script, "ai_review": ai_review}
+
+    return {"computational_result": simulation_script, "ai_review": ai_review, "citations": citations}
 
 @app.post("/api/step/execute")
 async def step_execute(request: StepExecuteRequest):
@@ -457,10 +525,13 @@ async def step_execute(request: StepExecuteRequest):
 
 @app.post("/api/step/synthesize")
 async def step_synthesize(request: StepSynthesizeRequest):
-    knowledge_section = f"**Background Knowledge:**\n---\n{request.knowledge_base}\n---\n" if request.knowledge_base else ""
+    query = json.dumps(request.history)
+    relevant_chunks = knowledge_base_instance.get_relevant_chunks(query)
+    knowledge_section = f"**Background Knowledge:**\n---\n{''.join(relevant_chunks)}\n---\n" if relevant_chunks else ""
     synthesis_prompt = f"{knowledge_section}**Your Task:**\nSynthesize a final report based on the following history:\n{json.dumps(request.history, indent=2)}"
-    synthesis_report = await call_ai_provider(request.provider, request.model, synthesis_prompt)
-    return {"synthesis_report": synthesis_report}
+    synthesis_report_raw = await call_ai_provider(request.provider, request.model, synthesis_prompt)
+    synthesis_report, citations = process_citations(synthesis_report_raw, "\n".join(relevant_chunks))
+    return {"synthesis_report": synthesis_report, "citations": citations}
 
 
 @app.post("/api/run-workflow", deprecated=True)

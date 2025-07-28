@@ -147,39 +147,18 @@ window.app.handlers = {
         }
     },
 
-    displayStepResult: function(step, result) {
-        const resultsContainer = document.getElementById('results-container');
-        const resultDiv = document.createElement('div');
-        resultDiv.className = 'result-section';
-        resultDiv.id = `result-${step}`;
 
-        let contentHtml = '';
-        if (result.computational_result) {
-             if (typeof result.computational_result === 'object') {
-                // Non-editable objects
-                contentHtml += `<h4>Computational Result:</h4><pre>${JSON.stringify(result.computational_result, null, 2)}</pre>`;
-            } else {
-                // Editable text content
-                contentHtml += `<h4>Computational Result:</h4><div class="result-content-editable">${window.app.utils.markdownToHtml(result.computational_result)}</div>`;
-            }
+    saveStateToLocalStorage: function() {
+        try {
+            const stateToSave = {
+                sessions: window.app.state.sessions,
+                activeSessionId: window.app.state.activeSessionId
+            };
+            localStorage.setItem('phoenix-session', JSON.stringify(stateToSave));
+        } catch (e) {
+            console.error("Failed to save state to localStorage", e);
+            window.app.ui.showNotification("Could not save session. Your browser might be out of space.", "error");
         }
-        if (result.ai_review) {
-            contentHtml += `<h4>AI Review:</h4><div class="result-content">${window.app.utils.markdownToHtml(result.ai_review)}</div>`;
-        }
-        if (result.synthesis_report) {
-            contentHtml += `<h4>Synthesis Report:</h4><div class="result-content">${window.app.utils.markdownToHtml(result.synthesis_report)}</div>`;
-        }
-
-        resultDiv.innerHTML = contentHtml;
-
-        const nextStep = window.app.state.workflow.getNextStep(step);
-        if (nextStep) {
-            const buttons = window.app.ui.createApprovalButtons(step);
-            resultDiv.appendChild(buttons);
-        }
-
-        resultsContainer.appendChild(resultDiv);
-        resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
     },
 
     createNewSession: function(problem) {
@@ -197,6 +176,7 @@ window.app.handlers = {
         window.app.state.workflow.history = {};
         window.app.state.workflow.currentStep = 'step-model';
         window.app.state.knowledge.files = [];
+        this.saveStateToLocalStorage();
     },
 
     updateActiveSession: function() {
@@ -204,6 +184,7 @@ window.app.handlers = {
         if (activeSession) {
             activeSession.workflowState = { ...window.app.state.workflow };
             activeSession.knowledge = { ...window.app.state.knowledge };
+            this.saveStateToLocalStorage();
         }
     },
 
@@ -220,6 +201,7 @@ window.app.handlers = {
                     window.app.ui.renderHistory();
                     window.app.ui.renderKnowledgeFiles();
                     this.redisplayWorkflow();
+                    this.saveStateToLocalStorage();
                 }
             }
         }
@@ -235,21 +217,23 @@ window.app.handlers = {
         window.app.ui.updateStepVisualization(window.app.state.workflow.currentStep);
     },
 
-    handleKnowledgeUpload: function(event) {
+    handleKnowledgeUpload: async function(event) {
         const files = event.target.files;
         if (!files.length) return;
 
         for (const file of files) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const content = e.target.result;
+            try {
+                const result = await window.app.api.processKnowledge(file);
+                window.app.ui.showNotification(`Successfully processed ${result.filename}.`, 'success');
+                // We don't need to store the content in the frontend anymore
                 window.app.state.knowledge.files.push({
                     filename: file.name,
-                    content: content
+                    content: null // No need to store content
                 });
                 window.app.ui.renderKnowledgeFiles();
-            };
-            reader.readAsText(file);
+            } catch (error) {
+                window.app.ui.showNotification(`Error processing ${file.name}: ${error.message}`, 'error');
+            }
         }
     },
 

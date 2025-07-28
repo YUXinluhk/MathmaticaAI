@@ -151,6 +151,36 @@ pre {
     overflow-x: auto;
 }
 
+/* --- Citations & Tooltips --- */
+.citation {
+    display: inline-block;
+    background-color: #e0e0e0;
+    color: #333;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    vertical-align: super;
+    margin: 0 2px;
+}
+
+.citation-tooltip {
+    position: absolute;
+    background-color: #333;
+    color: white;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    z-index: 1010;
+    max-width: 400px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
 /* --- Control Panel --- */
 .config-section, .save-section {
     background: #fff;

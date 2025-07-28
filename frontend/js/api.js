@@ -153,6 +153,28 @@ window.app.api = {
         }
     },
 
+    processKnowledge: async function(file) {
+        const url = `${this.BASE_URL}/api/knowledge/process`;
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `Knowledge file processing failed: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Knowledge file processing failed:", error);
+            throw error;
+        }
+    },
+
     uploadKnowledge: async function(file) {
         const url = `${this.BASE_URL}/api/knowledge/upload`;
         const formData = new FormData();
