@@ -7,6 +7,7 @@ window.app.handlers = {
             const solver = document.getElementById('solver-preference').value;
             const csvUpload = document.getElementById('csv-upload');
             const file = csvUpload.files[0];
+            const optimizationGoal = document.getElementById('optimization-goal').value;
             let filePath = null;
 
             window.app.ui.showNotification('开始处理...', 'info');
@@ -17,7 +18,12 @@ window.app.handlers = {
                     filePath = uploadResult.filepath;
                 }
 
-                const result = await window.app.api.runWorkflow(problem, parameters, solver, filePath);
+                let result;
+                if (optimizationGoal) {
+                    result = await window.app.api.runOptimization(problem, parameters, solver, filePath, optimizationGoal);
+                } else {
+                    result = await window.app.api.runWorkflow(problem, parameters, solver, filePath);
+                }
 
                 // Clear previous results
                 document.getElementById('results-container').innerHTML = '';
