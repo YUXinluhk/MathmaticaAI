@@ -5,11 +5,19 @@ window.app.handlers = {
             const problem = document.getElementById('problem-input').value;
             const parameters = window.app.parameters.getParameters();
             const solver = document.getElementById('solver-preference').value;
+            const csvUpload = document.getElementById('csv-upload');
+            const file = csvUpload.files[0];
+            let filePath = null;
 
             window.app.ui.showNotification('开始处理...', 'info');
 
             try {
-                const result = await window.app.api.runWorkflow(problem, parameters, solver);
+                if (file) {
+                    const uploadResult = await window.app.api.uploadData(file);
+                    filePath = uploadResult.filepath;
+                }
+
+                const result = await window.app.api.runWorkflow(problem, parameters, solver, filePath);
 
                 // Clear previous results
                 document.getElementById('results-container').innerHTML = '';

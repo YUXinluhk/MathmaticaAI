@@ -78,14 +78,15 @@ window.app.api = {
         }
     },
 
-    runWorkflow: async function(problem, parameters, solver) {
+    runWorkflow: async function(problem, parameters, solver, filePath) {
         const url = `${this.BASE_URL}/api/run-workflow`;
         const requestBody = {
             provider: window.app.state.systemState.aiConfig.provider,
             model: window.app.state.systemState.aiConfig.model,
             problem: problem,
             parameters: parameters,
-            solver_preference: solver
+            solver_preference: solver,
+            file_path: filePath
         };
 
         try {
@@ -102,6 +103,28 @@ window.app.api = {
             return await response.json();
         } catch (error) {
             console.error("Workflow execution failed:", error);
+            throw error;
+        }
+    },
+
+    uploadData: async function(file) {
+        const url = `${this.BASE_URL}/api/upload-data`;
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `File upload failed: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("File upload failed:", error);
             throw error;
         }
     }
