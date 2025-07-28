@@ -53,7 +53,7 @@ class PythonAgent(SolverAgent):
                 docker_command.extend(["-v", f"{data_filepath}:/usr/src/app/data.csv"])
 
             docker_command.extend([
-                "python:3.9-slim",
+                "archimedes-sandbox:latest",
                 "python", "script.py"
             ])
 

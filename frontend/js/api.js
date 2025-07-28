@@ -76,5 +76,33 @@ window.app.api = {
             console.error("LaTeX report generation failed:", error);
             throw error;
         }
+    },
+
+    runWorkflow: async function(problem, parameters, solver) {
+        const url = `${this.BASE_URL}/api/run-workflow`;
+        const requestBody = {
+            provider: window.app.state.systemState.aiConfig.provider,
+            model: window.app.state.systemState.aiConfig.model,
+            problem: problem,
+            parameters: parameters,
+            solver_preference: solver
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `Workflow failed: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Workflow execution failed:", error);
+            throw error;
+        }
     }
 };

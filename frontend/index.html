@@ -136,6 +136,14 @@
                         <label for="model-version">模型版本:</label>
                         <select id="model-version"></select>
                     </div>
+                    <div class="config-group">
+                        <label for="solver-preference">求解器偏好:</label>
+                        <select id="solver-preference">
+                            <option value="python">Python</option>
+                            <option value="matlab">MATLAB</option>
+                            <option value="abaqus">Abaqus</option>
+                        </select>
+                    </div>
                     <button class="config-btn" id="test-ai-btn">🔗 测试AI连接 <span class="status-indicator status-disconnected" id="ai-connection-status"></span></button>
                     <button class="config-btn" id="test-connection-btn">🔌 测试后端连接</button>
                 </div>

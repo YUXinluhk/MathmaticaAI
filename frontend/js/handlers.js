@@ -1,16 +1,19 @@
 window.app = window.app || {};
 window.app.handlers = {
     initializeEventListeners: function() {
-        document.getElementById('solve-button').addEventListener('click', () => {
+        document.getElementById('solve-button').addEventListener('click', async () => {
             const problem = document.getElementById('problem-input').value;
             const parameters = window.app.parameters.getParameters();
-            // This is a placeholder for the actual function call
-            // In a real application, you would pass the problem and parameters
-            // to the verification process.
-            console.log("Problem:", problem);
-            console.log("Parameters:", parameters);
+            const solver = document.getElementById('solver-preference').value;
+
             window.app.ui.showNotification('开始处理...', 'info');
-            window.app.verification.startRigorousVerification(problem, parameters);
+
+            try {
+                const result = await window.app.api.runWorkflow(problem, parameters, solver);
+                window.app.ui.displayResult(result);
+            } catch (error) {
+                window.app.ui.showNotification(`处理失败: ${error.message}`, 'error');
+            }
         });
 
         document.getElementById('add-parameter-btn').addEventListener('click', () => {
