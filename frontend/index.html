@@ -27,6 +27,11 @@
                         <textarea id="problem-input" placeholder="请输入工程问题..."></textarea>
                     </div>
                     <div class="input-group">
+                        <label for="knowledge-upload">🧠 知识库 (.txt, .md):</label>
+                        <input type="file" id="knowledge-upload" accept=".txt,.md" multiple>
+                        <ul id="knowledge-file-list"></ul>
+                    </div>
+                    <div class="input-group">
                         <label>🔩 物理参数:</label>
                         <div id="parameters-container">
                             <!-- Parameter rows will be inserted here -->

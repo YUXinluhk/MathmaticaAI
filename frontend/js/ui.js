@@ -147,5 +147,15 @@ window.app.ui = {
             sessionDiv.dataset.sessionId = session.id;
             historyList.appendChild(sessionDiv);
         });
+    },
+
+    renderKnowledgeFiles: function() {
+        const fileList = document.getElementById('knowledge-file-list');
+        fileList.innerHTML = '';
+        window.app.state.knowledge.files.forEach(file => {
+            const fileItem = document.createElement('li');
+            fileItem.textContent = file.filename;
+            fileList.appendChild(fileItem);
+        });
     }
 };

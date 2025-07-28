@@ -15,6 +15,9 @@ window.app.state = {
     },
     sessions: [],
     activeSessionId: null,
+    knowledge: {
+        files: []
+    },
     systemState: {
         aiConfig: {
             provider: 'google',

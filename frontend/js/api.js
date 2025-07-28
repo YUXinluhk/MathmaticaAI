@@ -142,6 +142,28 @@ window.app.api = {
         }
     },
 
+    uploadKnowledge: async function(file) {
+        const url = `${this.BASE_URL}/api/knowledge/upload`;
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `Knowledge file upload failed: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Knowledge file upload failed:", error);
+            throw error;
+        }
+    },
+
     runOptimization: async function(problem, parameters, solver, filePath, optimizationGoal) {
         const url = `${this.BASE_URL}/api/run-optimization`;
         const requestBody = {

@@ -267,17 +267,28 @@ async def upload_data(file: UploadFile = File(...)):
         temp_file.write(await file.read())
         return {"filepath": temp_file.name}
 
+@app.post("/api/knowledge/upload")
+async def upload_knowledge(file: UploadFile = File(...)):
+    # For simplicity, we'll save it to a temp file.
+    # In a real application, you'd want to manage this more robustly,
+    # perhaps associating it with a user session.
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".tmp") as temp_file:
+        temp_file.write(await file.read())
+        return {"filepath": temp_file.name, "filename": file.filename}
+
 class StepModelRequest(BaseModel):
     provider: str
     model: str
     problem: str
     parameters: Dict[str, Any]
+    knowledge_base: Optional[str] = None
 
 class StepGenerateScriptRequest(BaseModel):
     provider: str
     model: str
     modeling_result: str
     parameters: Dict[str, Any]
+    knowledge_base: Optional[str] = None
 
 class StepExecuteRequest(BaseModel):
     script: str
@@ -288,25 +299,27 @@ class StepSynthesizeRequest(BaseModel):
     provider: str
     model: str
     history: Dict[str, Any]
+    knowledge_base: Optional[str] = None
 
 
 @app.post("/api/step/model")
 async def step_model(request: StepModelRequest):
-    # This is a simplified version of the first part of the original workflow
-    modeling_prompt = f"Problem: {request.problem}\nParameters: {json.dumps(request.parameters)}"
+    knowledge_section = f"**Background Knowledge:**\n---\n{request.knowledge_base}\n---\n" if request.knowledge_base else ""
+    modeling_prompt = f"{knowledge_section}**Your Task:**\nProblem: {request.problem}\nParameters: {json.dumps(request.parameters)}"
     modeling_result = await call_ai_provider(request.provider, request.model, modeling_prompt)
 
-    review_prompt = f"Modeling Result:\n{modeling_result}"
+    review_prompt = f"{knowledge_section}**Your Task:**\nReview the following modeling result:\n{modeling_result}"
     ai_review = await call_ai_provider(request.provider, request.model, review_prompt)
 
     return {"computational_result": modeling_result, "ai_review": ai_review}
 
 @app.post("/api/step/generate-script")
 async def step_generate_script(request: StepGenerateScriptRequest):
-    script_prompt = f"Modeling Result:\n{request.modeling_result}\nParameters: {json.dumps(request.parameters)}"
+    knowledge_section = f"**Background Knowledge:**\n---\n{request.knowledge_base}\n---\n" if request.knowledge_base else ""
+    script_prompt = f"{knowledge_section}**Your Task:**\nBased on the modeling result, generate a simulation script.\nModeling Result:\n{request.modeling_result}\nParameters: {json.dumps(request.parameters)}"
     simulation_script = await call_ai_provider(request.provider, request.model, script_prompt)
 
-    review_prompt = f"Generated Script:\n{simulation_script}"
+    review_prompt = f"{knowledge_section}**Your Task:**\nReview the following generated script:\n{simulation_script}"
     ai_review = await call_ai_provider(request.provider, request.model, review_prompt)
 
     return {"computational_result": simulation_script, "ai_review": ai_review}
@@ -333,7 +346,8 @@ async def step_execute(request: StepExecuteRequest):
 
 @app.post("/api/step/synthesize")
 async def step_synthesize(request: StepSynthesizeRequest):
-    synthesis_prompt = f"Synthesize a final report based on the following history:\n{json.dumps(request.history, indent=2)}"
+    knowledge_section = f"**Background Knowledge:**\n---\n{request.knowledge_base}\n---\n" if request.knowledge_base else ""
+    synthesis_prompt = f"{knowledge_section}**Your Task:**\nSynthesize a final report based on the following history:\n{json.dumps(request.history, indent=2)}"
     synthesis_report = await call_ai_provider(request.provider, request.model, synthesis_prompt)
     return {"synthesis_report": synthesis_report}
 

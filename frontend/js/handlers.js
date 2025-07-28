@@ -7,6 +7,7 @@ window.app.handlers = {
         document.getElementById('add-parameter-btn').addEventListener('click', () => {
             window.app.parameters.addParameterRow();
         });
+        document.getElementById('knowledge-upload').addEventListener('change', this.handleKnowledgeUpload.bind(this));
     },
 
     startWorkflow: async function() {
@@ -25,9 +26,10 @@ window.app.handlers = {
         const parameters = window.app.parameters.getParameters();
         const provider = window.app.state.systemState.aiConfig.provider;
         const model = window.app.state.systemState.aiConfig.model;
+        const knowledgeBase = this.getKnowledgeBaseContent();
 
         try {
-            const result = await window.app.api.stepModel(provider, model, problem, parameters);
+            const result = await window.app.api.stepModel(provider, model, problem, parameters, knowledgeBase);
             window.app.state.workflow.history['step-model'] = result;
             this.displayStepResult('step-model', result);
         } catch (error) {
@@ -55,13 +57,14 @@ window.app.handlers = {
         const provider = window.app.state.systemState.aiConfig.provider;
         const model = window.app.state.systemState.aiConfig.model;
         const history = window.app.state.workflow.history;
+        const knowledgeBase = this.getKnowledgeBaseContent();
 
         try {
             let result;
             if (step === 'step-generate-script') {
                 const modelingResult = history['step-model'].computational_result;
                 const parameters = window.app.parameters.getParameters();
-                result = await window.app.api.stepGenerateScript(provider, model, modelingResult, parameters);
+                result = await window.app.api.stepGenerateScript(provider, model, modelingResult, parameters, knowledgeBase);
             } else if (step === 'step-execute') {
                 const script = history['step-generate-script'].computational_result;
                 const parameters = window.app.parameters.getParameters();
@@ -74,7 +77,7 @@ window.app.handlers = {
                 }
                 result = await window.app.api.stepExecute(script, parameters, filePath);
             } else if (step === 'step-synthesize') {
-                result = await window.app.api.stepSynthesize(provider, model, history);
+                result = await window.app.api.stepSynthesize(provider, model, history, knowledgeBase);
             }
 
             window.app.state.workflow.history[step] = result;
@@ -125,19 +128,22 @@ window.app.handlers = {
         const newSession = {
             id: sessionId,
             name: sessionName,
-            workflowState: { ...window.app.state.workflow }
+            workflowState: { ...window.app.state.workflow },
+            knowledge: { ...window.app.state.knowledge }
         };
         window.app.state.sessions.push(newSession);
         window.app.state.activeSessionId = sessionId;
-        // Reset workflow for new session
+        // Reset for new session
         window.app.state.workflow.history = {};
         window.app.state.workflow.currentStep = 'step-model';
+        window.app.state.knowledge.files = [];
     },
 
     updateActiveSession: function() {
         const activeSession = window.app.state.sessions.find(s => s.id === window.app.state.activeSessionId);
         if (activeSession) {
             activeSession.workflowState = { ...window.app.state.workflow };
+            activeSession.knowledge = { ...window.app.state.knowledge };
         }
     },
 
@@ -150,7 +156,9 @@ window.app.handlers = {
                 if (selectedSession) {
                     window.app.state.activeSessionId = sessionId;
                     window.app.state.workflow = { ...selectedSession.workflowState };
+                    window.app.state.knowledge = { ...selectedSession.knowledge };
                     window.app.ui.renderHistory();
+                    window.app.ui.renderKnowledgeFiles();
                     this.redisplayWorkflow();
                 }
             }
@@ -165,5 +173,31 @@ window.app.handlers = {
             this.displayStepResult(step, history[step]);
         }
         window.app.ui.updateStepVisualization(window.app.state.workflow.currentStep);
+    },
+
+    handleKnowledgeUpload: function(event) {
+        const files = event.target.files;
+        if (!files.length) return;
+
+        for (const file of files) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const content = e.target.result;
+                window.app.state.knowledge.files.push({
+                    filename: file.name,
+                    content: content
+                });
+                window.app.ui.renderKnowledgeFiles();
+            };
+            reader.readAsText(file);
+        }
+    },
+
+    getKnowledgeBaseContent: function() {
+        let content = '';
+        for (const file of window.app.state.knowledge.files) {
+            content += `--- ${file.filename} ---\n${file.content}\n\n`;
+        }
+        return content;
     }
 };
