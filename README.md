@@ -25,13 +25,18 @@ The platform is built with a modern web stack and a powerful backend:
 
 ## 🚀 How to Use
 
-1. **Describe the Problem**: In the "问题描述" (Problem Description) text area, describe the engineering problem you want to solve.
-2. **Set Parameters**: Define the physical parameters of your model using the "物理参数" (Physical Parameters) section.
-3. **Upload Data (Optional)**: If you have comparative data in a CSV file, you can upload it using the "对比数据" (Comparative Data) section.
-4. **Set Optimization Goal (Optional)**: If you want to run an optimization, enter your goal in the "（可选）输入优化目标" (Optional: Enter Optimization Goal) text box.
-5. **Start Simulation**: Click the "开始建模与仿真" (Start Modeling & Simulation) button.
-6. **View Results**: The platform will display the results of each step of the workflow, including the physical model, simulation script, execution results, and analysis.
-7. **Generate Report**: Once the simulation is complete, you can generate a LaTeX report of the results.
+1. **Start the application**:
+   ```bash
+   docker-compose up --build
+   ```
+2. **Access the frontend**: Open your web browser and navigate to `http://localhost:8080`.
+3. **Describe the Problem**: In the "问题描述" (Problem Description) text area, describe the engineering problem you want to solve.
+4. **Set Parameters**: Define the physical parameters of your model using the "物理参数" (Physical Parameters) section.
+5. **Upload Data (Optional)**: If you have comparative data in a CSV file, you can upload it using the "对比数据" (Comparative Data) section.
+6. **Set Optimization Goal (Optional)**: If you want to run an optimization, enter your goal in the "（可选）输入优化目标" (Optional: Enter Optimization Goal) text box.
+7. **Start Simulation**: Click the "开始建模与仿真" (Start Modeling & Simulation) button.
+8. **View Results**: The platform will display the results of each step of the workflow, including the physical model, simulation script, execution results, and analysis.
+9. **Generate Report**: Once the simulation is complete, you can generate a LaTeX report of the results.
 
 ## Running Tests
 

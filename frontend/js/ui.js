@@ -231,6 +231,27 @@ window.app.ui = {
         });
     },
 
+    addCopyButtonsToCodeBlocks: function(container) {
+        const codeBlocks = container.querySelectorAll('pre');
+        codeBlocks.forEach(block => {
+            const copyButton = document.createElement('button');
+            copyButton.className = 'copy-btn';
+            copyButton.textContent = 'Copy';
+            copyButton.addEventListener('click', () => {
+                const code = block.querySelector('code') ? block.querySelector('code').innerText : block.innerText;
+                navigator.clipboard.writeText(code).then(() => {
+                    copyButton.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copyButton.textContent = 'Copy';
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                });
+            });
+            block.appendChild(copyButton);
+        });
+    },
+
     displayStepResult: function(step, result) {
         const resultsContainer = document.getElementById('results-container');
         const resultDiv = document.createElement('div');
@@ -240,30 +261,29 @@ window.app.ui = {
         let contentHtml = '';
         if (result.computational_result) {
              if (typeof result.computational_result === 'object') {
-                // Non-editable objects
-                contentHtml += `<h4>Computational Result:</h4><pre>${JSON.stringify(result.computational_result, null, 2)}</pre>`;
+                contentHtml += `<div class="result-part"><h4>Computational Result:</h4><pre><code>${JSON.stringify(result.computational_result, null, 2)}</code></pre></div>`;
             } else {
-                // Editable text content, now includes citations
-                contentHtml += `<h4>Computational Result:</h4><div class="result-content-editable">${result.computational_result}</div>`;
+                contentHtml += `<div class="result-part"><h4>Computational Result:</h4><div class="result-content-editable">${result.computational_result}</div></div>`;
             }
         }
         if (result.ai_review) {
-            contentHtml += `<h4>AI Review:</h4><div class="result-content">${result.ai_review}</div>`;
+            contentHtml += `<div class="result-part ai-review"><h4>AI Review:</h4><div class="result-content">${result.ai_review}</div></div>`;
         }
         if (result.synthesis_report) {
-            contentHtml += `<h4>Synthesis Report:</h4><div class="result-content">${result.synthesis_report}</div>`;
+            contentHtml += `<div class="result-part synthesis-report"><h4>Synthesis Report:</h4><div class="result-content">${result.synthesis_report}</div></div>`;
         }
 
-        // Store citations in the element's dataset for the tooltip handler
         if (result.citations && result.citations.length > 0) {
             resultDiv.dataset.citations = JSON.stringify(result.citations);
         }
 
         resultDiv.innerHTML = contentHtml;
 
+        this.addCopyButtonsToCodeBlocks(resultDiv);
+
         const nextStep = window.app.state.workflow.getNextStep(step);
         if (nextStep) {
-            const buttons = window.app.ui.createApprovalButtons(step);
+            const buttons = this.createApprovalButtons(step);
             resultDiv.appendChild(buttons);
         }
 

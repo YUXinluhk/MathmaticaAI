@@ -10,6 +10,13 @@ window.app.handlers = {
         document.getElementById('knowledge-upload').addEventListener('change', this.handleKnowledgeUpload.bind(this));
     },
 
+    setLoading: function(isLoading) {
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const solveButton = document.getElementById('solve-button');
+        loadingOverlay.style.display = isLoading ? 'flex' : 'none';
+        solveButton.disabled = isLoading;
+    },
+
     startWorkflow: async function() {
         const problem = document.getElementById('problem-input').value;
         if (!problem) {
@@ -17,6 +24,7 @@ window.app.handlers = {
             return;
         }
 
+        this.setLoading(true);
         this.createNewSession(problem);
         window.app.ui.renderHistory();
 
@@ -35,16 +43,34 @@ window.app.handlers = {
         } catch (error) {
             const errorMessage = error.isAppError ? error.errorData : `Error in modeling step: ${error.message}`;
             window.app.ui.showNotification(errorMessage, 'error');
+        } finally {
+            this.setLoading(false);
         }
     },
 
     handleResultActions: async function(event) {
-        if (event.target.classList.contains('approve-btn')) {
-            const nextStep = event.target.dataset.nextStep;
+        const approveBtn = event.target.closest('.approve-btn');
+        const reviseBtn = event.target.closest('.revise-btn');
+
+        if (approveBtn) {
+            const nextStep = approveBtn.dataset.nextStep;
             if (nextStep) {
-                this.proceedToNextStep(nextStep);
+                approveBtn.disabled = true;
+                approveBtn.textContent = 'Processing...';
+                this.setLoading(true);
+                try {
+                    await this.proceedToNextStep(nextStep);
+                } finally {
+                    this.setLoading(false);
+                    // The button might not exist if the step replaces the section
+                    const newBtn = document.querySelector(`[data-next-step="${nextStep}"]`);
+                    if(newBtn) {
+                       newBtn.disabled = false;
+                       newBtn.textContent = 'Approve & Continue';
+                    }
+                }
             }
-        } else if (event.target.classList.contains('revise-btn')) {
+        } else if (reviseBtn) {
             const resultSection = event.target.closest('.result-section');
             const contentElement = resultSection.querySelector('.result-content-editable');
             const buttonContainer = resultSection.querySelector('.approval-buttons');
@@ -80,6 +106,7 @@ window.app.handlers = {
 
     resubmitStep: async function(step, revisedContent) {
         window.app.ui.showNotification(`Resubmitting ${step} with revisions...`, 'info');
+        this.setLoading(true);
 
         const provider = window.app.state.systemState.aiConfig.provider;
         const model = window.app.state.systemState.aiConfig.model;
@@ -87,23 +114,27 @@ window.app.handlers = {
         const knowledgeBase = this.getKnowledgeBaseContent();
         const history = window.app.state.workflow.history;
 
-        let result;
-        if (step === 'step-model') {
-            result = await window.app.api.stepModel(provider, model, revisedContent, parameters, knowledgeBase);
-        } else if (step === 'step-generate-script') {
-            const modelingResult = history['step-model'].computational_result;
-            result = await window.app.api.stepGenerateScript(provider, model, modelingResult, parameters, knowledgeBase, revisedContent);
+        try {
+            let result;
+            if (step === 'step-model') {
+                result = await window.app.api.stepModel(provider, model, revisedContent, parameters, knowledgeBase);
+            } else if (step === 'step-generate-script') {
+                const modelingResult = history['step-model'].computational_result;
+                result = await window.app.api.stepGenerateScript(provider, model, modelingResult, parameters, knowledgeBase, revisedContent);
+            }
+            // Add other steps as needed
+
+            window.app.state.workflow.history[step] = result;
+
+            // Remove the old result div and display the new one
+            const oldResultDiv = document.getElementById(`result-${step}`);
+            if(oldResultDiv) oldResultDiv.remove();
+
+            this.displayStepResult(step, result);
+            this.updateActiveSession();
+        } finally {
+            this.setLoading(false);
         }
-        // Add other steps as needed
-
-        window.app.state.workflow.history[step] = result;
-
-        // Remove the old result div and display the new one
-        const oldResultDiv = document.getElementById(`result-${step}`);
-        if(oldResultDiv) oldResultDiv.remove();
-
-        this.displayStepResult(step, result);
-        this.updateActiveSession();
     },
 
     proceedToNextStep: async function(step) {

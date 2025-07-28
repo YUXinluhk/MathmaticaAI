@@ -1,5 +1,7 @@
 import re
 from typing import List
+import numpy as np
+from sentence_transformers import SentenceTransformer
 
 def chunk_text(text: str, chunk_size: int = 200, overlap: int = 50) -> List[str]:
     """
@@ -34,14 +36,22 @@ class KnowledgeBase:
     """
     def __init__(self):
         self.chunks = []
-        self._embeddings = None
-        self._model = None
+        self._embeddings = []
+        self._model = SentenceTransformer('allenai/scincl-base-p')
 
     def add_document(self, text: str):
         """
         Adds a document to the knowledge base, splitting it into chunks.
         """
-        self.chunks.extend(chunk_text(text))
+        new_chunks = chunk_text(text)
+        if new_chunks:
+            self.chunks.extend(new_chunks)
+            new_embeddings = self._model.encode(new_chunks, convert_to_tensor=False)
+            if self._embeddings:
+                self._embeddings = np.vstack([self._embeddings, new_embeddings])
+            else:
+                self._embeddings = new_embeddings
+
 
     def get_relevant_chunks(self, query: str, top_k: int = 3) -> List[str]:
         """
@@ -49,20 +59,18 @@ class KnowledgeBase:
         For now, this uses a simple keyword matching approach.
         A more advanced implementation would use vector embeddings.
         """
-        if not self.chunks:
+        if not self.chunks or self._embeddings is None or len(self._embeddings) == 0:
             return []
 
-        # Simple keyword matching
-        query_words = set(query.lower().split())
-        scores = []
-        for i, chunk in enumerate(self.chunks):
-            chunk_words = set(chunk.lower().split())
-            score = len(query_words.intersection(chunk_words))
-            scores.append((score, i))
+        query_embedding = self._model.encode([query], convert_to_tensor=False)
 
-        scores.sort(key=lambda x: x[0], reverse=True)
+        # Cosine similarity
+        cos_scores = np.dot(self._embeddings, query_embedding.T) / (
+            np.linalg.norm(self._embeddings, axis=1) * np.linalg.norm(query_embedding)
+        )
 
-        top_indices = [score[1] for score in scores[:top_k]]
+        # Get top_k scores
+        top_indices = np.argsort(cos_scores.flatten())[-top_k:][::-1]
 
         return [self.chunks[i] for i in top_indices]
 
