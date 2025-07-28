@@ -3,14 +3,16 @@ from typing import Dict, Any
 
 from fastapi import HTTPException
 
-from main import call_ai_provider, execute_python
+from agents import PythonAgent
+from main import call_ai_provider
 
 
 async def run_engineering_workflow(
     provider: str,
     model: str,
     problem: str,
-    parameters: Dict[str, Any]
+    parameters: Dict[str, Any],
+    data_filepath: str = None,
 ):
     """
     Runs the full engineering modeling and simulation workflow.
@@ -37,7 +39,8 @@ async def run_engineering_workflow(
     )
 
     # Step 4: Execute Simulation
-    execution_result = await execute_python(simulation_script)
+    python_agent = PythonAgent()
+    execution_result = python_agent.run(simulation_script, parameters, data_filepath)
 
     if not execution_result.success:
         raise HTTPException(status_code=400, detail=f"Python execution failed: {execution_result.error}")

@@ -80,11 +80,6 @@ class LatexReportRequest(BaseModel):
     provider: str
     model: str
 
-class CodeExecutionResult(BaseModel):
-    success: bool
-    output: str
-    error: str
-    image: str | None = None
 
 
 # --- Prompt Loading ---
@@ -193,35 +188,6 @@ async def call_ai_endpoint(request: AIRequest):
     return {"response": response_text}
 
 
-@app.post("/api/execute-python", response_model=CodeExecutionResult)
-async def execute_python(request: ExecuteRequest):
-    output_io = io.StringIO()
-    error_io = io.StringIO()
-    image_b64 = None
-    
-    safe_globals = {
-        "np": np, "sp": sp, "sympy": sp, "scipy": scipy, "plt": plt,
-        "__builtins__": __builtins__
-    }
-    
-    try:
-        with redirect_stdout(output_io), redirect_stderr(error_io):
-            exec(request.code, safe_globals)
-
-        if plt.get_fignums():
-            buf = io.BytesIO()
-            plt.savefig(buf, format='png')
-            buf.seek(0)
-            image_b64 = base64.b64encode(buf.read()).decode('utf-8')
-            plt.close('all')
-
-        output = output_io.getvalue()
-        error = error_io.getvalue()
-        
-        return CodeExecutionResult(success=not error, output=output, error=error, image=image_b64)
-    except Exception as e:
-        error = error_io.getvalue() + str(e) + "\n" + traceback.format_exc()
-        return CodeExecutionResult(success=False, output=output_io.getvalue(), error=error, image=None)
 
 @app.post("/api/generate-latex-report")
 async def generate_latex_report(request: LatexReportRequest):
@@ -265,6 +231,7 @@ async def generate_latex_report(request: LatexReportRequest):
         raise HTTPException(status_code=500, detail=f"Failed to generate LaTeX report: {str(e)}\n{traceback.format_exc()}")
 
 
+from fastapi import UploadFile, File
 from workflow import run_engineering_workflow
 
 class WorkflowRequest(BaseModel):
@@ -273,13 +240,20 @@ class WorkflowRequest(BaseModel):
     problem: str
     parameters: Dict[str, Any]
 
+@app.post("/api/upload-data")
+async def upload_data(file: UploadFile = File(...)):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as temp_file:
+        temp_file.write(await file.read())
+        return {"filepath": temp_file.name}
+
 @app.post("/api/run-workflow")
-async def run_workflow_endpoint(request: WorkflowRequest):
+async def run_workflow_endpoint(request: WorkflowRequest, data_filepath: str = None):
     return await run_engineering_workflow(
         request.provider,
         request.model,
         request.problem,
         request.parameters,
+        data_filepath,
     )
 
 if __name__ == "__main__":

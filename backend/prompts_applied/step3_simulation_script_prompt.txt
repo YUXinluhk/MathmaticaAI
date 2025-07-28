@@ -52,10 +52,33 @@ x_vals = np.linspace(0, params['L'], 101)
 w_vals = w_func(x_vals)
 
 plt.figure()
-plt.plot(x_vals, w_vals)
+plt.plot(x_vals, w_vals, label='Simulation')
+
+# 4. Data Comparison (if data is provided)
+try:
+    import pandas as pd
+    from sklearn.metrics import mean_squared_error
+
+    # Load experimental data
+    exp_data = pd.read_csv('data.csv')
+    exp_x = exp_data.iloc[:, 0]
+    exp_y = exp_data.iloc[:, 1]
+
+    # Plot experimental data
+    plt.scatter(exp_x, exp_y, label='Experimental', color='red')
+
+    # Calculate RMSE
+    sim_y_at_exp_x = w_func(exp_x)
+    rmse = np.sqrt(mean_squared_error(exp_y, sim_y_at_exp_x))
+    plt.text(0.05, 0.9, f'RMSE: {rmse:.4f}', transform=plt.gca().transAxes)
+
+except FileNotFoundError:
+    pass # No experimental data to compare against
+
 plt.title('Deflection of a Cantilever Beam')
 plt.xlabel('Position along beam (m)')
 plt.ylabel('Deflection (m)')
+plt.legend()
 plt.grid(True)
 plt.show()
 ```
