@@ -1,6 +1,7 @@
 import os
 import requests
 import traceback
+import configparser
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Response, BackgroundTasks
 from fastapi.responses import FileResponse
@@ -21,6 +22,10 @@ import sympy as sp
 import scipy
 import matplotlib.pyplot as plt
 import google.generativeai as genai
+
+# --- Config Parser Setup ---
+config = configparser.ConfigParser()
+config.read('backend/config.ini')
 
 # --- FastAPI and CORS Setup ---
 from fastapi.middleware.cors import CORSMiddleware
@@ -172,6 +177,9 @@ async def call_ai_endpoint(request: AIRequest):
         "simulation_script": ("prompts_applied", "step3_simulation_script_prompt.txt"),
         "synthesis": ("prompts_applied", "step4_synthesis_prompt.txt"),
         "plot_analysis": ("prompts_applied", "step5_plot_analysis_prompt.txt"),
+        "generate_matlab_script": ("prompts", "generate_matlab_script.txt"),
+        "generate_abaqus_script": ("prompts", "generate_abaqus_script.txt"),
+        "parse_solver_output": ("prompts", "parse_solver_output.txt"),
     }
     
     prompt_info = prompt_file_map.get(request.task)
@@ -239,6 +247,7 @@ class WorkflowRequest(BaseModel):
     model: str
     problem: str
     parameters: Dict[str, Any]
+    solver_preference: str
 
 @app.post("/api/upload-data")
 async def upload_data(file: UploadFile = File(...)):
@@ -253,6 +262,7 @@ async def run_workflow_endpoint(request: WorkflowRequest, data_filepath: str = N
         request.model,
         request.problem,
         request.parameters,
+        request.solver_preference,
         data_filepath,
     )
 

@@ -1,0 +1,9 @@
+You are an expert in parsing text output from engineering software. Your task is to extract structured data from the given solver output.
+
+Solver: {solver}
+Output:
+```
+{output}
+```
+
+Extract the key results and present them in a structured format (e.g., JSON or a summary table). The specific data to extract will depend on the problem, but focus on the most important numerical results, such as stresses, displacements, frequencies, or other relevant engineering quantities.
