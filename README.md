@@ -1,68 +1,53 @@
-# MathmaticaAI: 迭代式 AI 数学问题解决与验证平台
+# 🛠️ Engineering Modeling and Simulation Platform
 
-## 🚀 项目简介
+## 🌟 Project Vision
 
-MathmaticaAI 是一个创新的全栈 Web 应用，旨在通过 AI 驱动的迭代式流程，解决、验证和完善复杂的数学问题。它不仅仅是一个简单的“提问-回答”系统，而是一个模拟专家工作流的智能平台，结合了 AI 的逻辑推理、代码生成与执行验证，最终生成高度可靠、格式精美的 LaTeX 格式解题报告。
+This platform aims to revolutionize the engineering workflow by leveraging AI to automate modeling, simulation, and analysis. It provides engineers with an intelligent assistant that can understand complex engineering problems, generate simulation scripts, execute them in various solvers, and analyze the results. Our goal is to significantly reduce the time and effort required for engineering simulations, allowing engineers to focus on innovation and problem-solving.
 
-## ✨ 核心功能
+## ✨ Core Features
 
-1.  **多步迭代验证**: 采用一个精密的、多步骤的循环来处理数学问题：
-    *   **初始解答**: AI 生成初步的解决方案。
-    *   **自我改进**: AI 对初步方案进行审查和优化，形成“候选方案”。
-    *   **双轨并行验证 (规划中)**:
-        *   **AI 理论验证**: 一个独立的 AI 实例作为“理论家”，审查方案的逻辑严谨性。
-        *   **AI 编程验证**: 另一个 AI 实例作为“程序员”，编写 Python 代码来从数值或符号上验证结论。
-    *   **综合决策**: 更高层的 AI 主管综合理论和代码验证结果，做出“通过”或“失败”的最终裁决。
-    *   **循环修正**: 如果失败，系统会整合所有反馈，形成清晰的修改指令，开启下一轮迭代，直到连续多次通过验证。
+- **Natural Language-based Problem Description**: Describe your engineering problem in plain English.
+- **AI-powered Modeling**: The platform automatically generates physical models based on your description.
+- **Python-based Simulations**: The platform leverages the power of Python for running simulations and analyzing results.
+- **Automated Simulation & Analysis**: The platform runs the simulations and provides a detailed analysis of the results.
+- **Optimization Workflow**: Define an optimization goal, and the platform will iteratively adjust parameters to find the optimal solution.
+- **Data Upload**: Upload CSV files with comparative data for more accurate simulations.
+- **LaTeX Report Generation**: Automatically generate professional reports of your simulation results.
 
-2.  **动态代码执行**: 后端能够安全地执行由 AI 生成的 Python 验证代码，并将结果（成功输出或错误信息）反馈给决策系统。
+## 🏗️ Technical Architecture
 
-3.  **LaTeX 报告生成**: 一旦问题得到最终验证，系统会自动生成一份专业、美观的 LaTeX 格式报告，完美展示解题的完整步骤和最终结论。
+The platform is built with a modern web stack and a powerful backend:
 
-4.  **Web 交互界面**: 提供一个简洁直观的前端界面，用户可以：
-    *   输入数学问题。
-    *   实时查看 AI 的思考过程、每一步的验证状态和结果。
-    *   最终下载 `.zip` 压缩包，其中包含完整的 LaTeX 源码 (`.tex`) 和编译好的 PDF 报告。
+- **Frontend**: A responsive user interface built with HTML, CSS, and vanilla JavaScript. It communicates with the backend via a RESTful API.
+- **Backend**: A Python-based backend using FastAPI. It orchestrates the entire workflow, from calling the AI models to executing the simulation scripts.
+- **AI Integration**: The platform integrates with various large language models (LLMs) like Google's Gemini, OpenAI's GPT-4, and DeepSeek to understand and solve engineering problems.
+- **Solver Agents**: A specialized agent is responsible for interacting with the Python solver, ensuring that the generated scripts are executed correctly.
 
-## 🛠️ 技术栈
+## 🚀 How to Use
 
-*   **后端**:
-    *   **框架**: `Python` + `FastAPI`
-    *   **服务器**: `uvicorn`
-    *   **核心**: 异步处理、AI 模型接口调用、沙箱化代码执行。
-*   **前端**:
-    *   **技术**: 原生 `JavaScript`, `HTML`, `CSS`
-    *   **服务器**: `python -m http.server`
-    *   **库**: `MathJax` (用于实时渲染 LaTeX 公式), `JSZip` (用于打包下载结果)。
-*   **通信**: 前后端通过 `REST API` 进行异步通信，并已解决 `CORS` 跨域问题。
+1. **Start the application**:
+   ```bash
+   docker-compose up --build
+   ```
+2. **Access the frontend**: Open your web browser and navigate to `http://localhost:8080`.
+3. **Describe the Problem**: In the "问题描述" (Problem Description) text area, describe the engineering problem you want to solve.
+4. **Set Parameters**: Define the physical parameters of your model using the "物理参数" (Physical Parameters) section.
+5. **Upload Data (Optional)**: If you have comparative data in a CSV file, you can upload it using the "对比数据" (Comparative Data) section.
+6. **Set Optimization Goal (Optional)**: If you want to run an optimization, enter your goal in the "（可选）输入优化目标" (Optional: Enter Optimization Goal) text box.
+7. **Start Simulation**: Click the "开始建模与仿真" (Start Modeling & Simulation) button.
+8. **View Results**: The platform will display the results of each step of the workflow, including the physical model, simulation script, execution results, and analysis.
+9. **Generate Report**: Once the simulation is complete, you can generate a LaTeX report of the results.
 
-## ⚙️ 环境配置
+## Running Tests
 
-在启动后端服务之前，您需要配置必要的环境变量。
+To run the backend unit tests, navigate to the `backend` directory and install the required dependencies:
 
-1.  进入 `backend` 目录。
-2.  将 ` .env.example` 文件复制一份并重命名为 `.env`。
-3.  编辑 `.env` 文件，填入您自己的 API 密钥。
-
-```
-# .env file content
-GEMINI_API_KEY=YOUR_GEMINI_API_KEY
-OPENAI_API_KEY=YOUR_OPENAI_API_KEY
-DEEPSEEK_API_KEY=YOUR_DEEPSEEK_API_KEY
+```bash
+pip install -r requirements.txt
 ```
 
-## 启动方式
+Then, from the root directory of the project, run pytest:
 
-1.  **启动后端服务 (端口 8000)**:
-    ```bash
-    cd backend
-    uvicorn main:app --reload
-    ```
-
-2.  **启动前端服务 (端口 8080)**:
-    ```bash
-    cd frontend
-    python -m http.server 8080
-    ```
-
-3.  在浏览器中打开 `http://localhost:8080` 即可访问应用。
+```bash
+pytest
+```

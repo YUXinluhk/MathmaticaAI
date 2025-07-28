@@ -1,8 +1,0 @@
-Your task is to act as a precise mathematical typesetter. Convert the following natural language description of a mathematical problem into a single, unambiguous LaTeX expression.
-
--   Only output the LaTeX code.
--   Do not solve the problem.
--   Do not add any explanatory text.
-
-Natural Language Problem:
-"{problem}"

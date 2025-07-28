@@ -1,13 +1,16 @@
 import os
 import requests
 import traceback
+import configparser
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Response, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Response, BackgroundTasks, Request
+from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 import io
 import base64
+import json
 from contextlib import redirect_stdout, redirect_stderr
 import tempfile
 import shutil
@@ -22,10 +25,54 @@ import scipy
 import matplotlib.pyplot as plt
 import google.generativeai as genai
 
+# --- Error Handling ---
+class AppError(Exception):
+    def __init__(self, error_code: str, message: str, suggestion: str = "No suggestion provided."):
+        self.error_code = error_code
+        self.message = message
+        self.suggestion = suggestion
+        super().__init__(self.message)
+
+# Define specific error codes
+class ErrorCodes:
+    AI_API_TIMEOUT = "AI_API_TIMEOUT"
+    AI_API_ERROR = "AI_API_ERROR"
+    FILE_NOT_FOUND = "FILE_NOT_FOUND"
+    PYTHON_EXECUTION_ERROR = "PYTHON_EXECUTION_ERROR"
+    INVALID_INPUT = "INVALID_INPUT"
+    UNKNOWN_ERROR = "UNKNOWN_ERROR"
+
+# --- Config Parser Setup ---
+config = configparser.ConfigParser()
+config.read('backend/config.ini')
+
 # --- FastAPI and CORS Setup ---
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+@app.exception_handler(AppError)
+async def app_exception_handler(request: Request, exc: AppError):
+    return JSONResponse(
+        status_code=400, # Using 400 for client errors, can be adjusted
+        content={
+            "error_code": exc.error_code,
+            "message": exc.message,
+            "suggestion": exc.suggestion,
+        },
+    )
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error_code": ErrorCodes.UNKNOWN_ERROR,
+            "message": "An unexpected server error occurred.",
+            "suggestion": "Please contact support or try again later.",
+            "detail": str(exc) # Optional: for debugging
+        },
+    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -50,12 +97,15 @@ if GEMINI_API_KEY:
         print(f"Warning: Failed to configure Google GenAI client: {e}")
 
 
+import re
+
 # --- Pydantic Models ---
 class AIRequest(BaseModel):
     provider: str
     model: str
     task: str
     data: Dict[str, Any]
+    parameters: Optional[Dict[str, Any]] = None
 
 class ExecuteRequest(BaseModel):
     code: str
@@ -79,23 +129,27 @@ class LatexReportRequest(BaseModel):
     provider: str
     model: str
 
-class CodeExecutionResult(BaseModel):
-    success: bool
-    output: str
-    error: str
-    image: str | None = None
 
 
 # --- Prompt Loading ---
-def load_prompt(filename: str, data: Dict[str, Any]) -> str:
+def load_prompt(filename: str, data: Dict[str, Any], base_folder: str = "prompts") -> str:
     try:
-        with open(os.path.join("prompts", filename), "r", encoding="utf-8") as f:
+        filepath = os.path.join(base_folder, filename)
+        with open(filepath, "r", encoding="utf-8") as f:
             prompt_template = f.read()
         return prompt_template.format(**data)
     except FileNotFoundError:
-        raise HTTPException(status_code=500, detail=f"Prompt file not found: {filename}")
+        raise AppError(
+            error_code=ErrorCodes.FILE_NOT_FOUND,
+            message=f"Prompt file not found: {filename}",
+            suggestion="Please check that the prompt files exist in the correct directory."
+        )
     except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Missing data for prompt placeholder: {e}")
+        raise AppError(
+            error_code=ErrorCodes.INVALID_INPUT,
+            message=f"Missing data for prompt placeholder: {e}",
+            suggestion="Ensure all required data fields are provided for the prompt."
+        )
 
 
 # --- AI Call Handlers ---
@@ -116,9 +170,23 @@ async def call_gemini_api(model: str, prompt: str) -> str:
         if response.parts:
             return "".join(part.text for part in response.parts)
         else:
-            return "Error: The AI model did not provide a valid response."
+            raise AppError(
+                error_code=ErrorCodes.AI_API_ERROR,
+                message="The AI model did not provide a valid response.",
+                suggestion="The model's response was empty. This might be a temporary issue. Please try again."
+            )
+    except requests.exceptions.Timeout:
+        raise AppError(
+            error_code=ErrorCodes.AI_API_TIMEOUT,
+            message="Google GenAI API request timed out.",
+            suggestion="The request took too long to complete. Check your network connection or try again later."
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Google GenAI Error: {str(e)}\n{traceback.format_exc()}")
+        raise AppError(
+            error_code=ErrorCodes.AI_API_ERROR,
+            message=f"Google GenAI Error: {str(e)}",
+            suggestion="An unexpected error occurred with the Google GenAI API. Check API keys and service status."
+        )
 
 async def call_openai_api(model: str, prompt: str) -> str:
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {OPENAI_API_KEY}"}
@@ -127,8 +195,18 @@ async def call_openai_api(model: str, prompt: str) -> str:
         response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=json_payload, timeout=120)
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
+    except requests.exceptions.Timeout:
+        raise AppError(
+            error_code=ErrorCodes.AI_API_TIMEOUT,
+            message="OpenAI API request timed out.",
+            suggestion="The request took too long to complete. Check your network connection or try again later."
+        )
     except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"OpenAI API Error: {str(e)}\n{traceback.format_exc()}")
+        raise AppError(
+            error_code=ErrorCodes.AI_API_ERROR,
+            message=f"OpenAI API Error: {str(e)}",
+            suggestion="An error occurred with the OpenAI API. Check your API key, model name, and network status."
+        )
 
 async def call_deepseek_api(model: str, prompt: str) -> str:
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {DEEPSEEK_API_KEY}"}
@@ -137,8 +215,18 @@ async def call_deepseek_api(model: str, prompt: str) -> str:
         response = requests.post("https://api.deepseek.com/v1/chat/completions", headers=headers, json=json_payload, timeout=120)
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
+    except requests.exceptions.Timeout:
+        raise AppError(
+            error_code=ErrorCodes.AI_API_TIMEOUT,
+            message="DeepSeek API request timed out.",
+            suggestion="The request took too long to complete. Check your network connection or try again later."
+        )
     except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"DeepSeek API Error: {str(e)}\n{traceback.format_exc()}")
+        raise AppError(
+            error_code=ErrorCodes.AI_API_ERROR,
+            message=f"DeepSeek API Error: {str(e)}",
+            suggestion="An error occurred with the DeepSeek API. Check your API key, model name, and network status."
+        )
 
 
 # --- API Endpoints ---
@@ -151,68 +239,55 @@ async def test_connection(request: ConnectionTestRequest):
     }
     url = urls.get(request.provider)
     if not url:
-        raise HTTPException(status_code=400, detail="Invalid provider.")
+        raise AppError(error_code=ErrorCodes.INVALID_INPUT, message="Invalid provider.")
     try:
         requests.get(url, timeout=10)
         return {"status": "success", "provider": request.provider, "message": f"Successfully connected to {request.provider}."}
     except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"Connection to {request.provider} failed: {str(e)}")
+        raise AppError(
+            error_code=ErrorCodes.AI_API_ERROR,
+            message=f"Connection to {request.provider} failed: {str(e)}",
+            suggestion="Could not connect to the AI provider. Check your network or the provider's status page."
+        )
 
 @app.post("/api/call-ai")
 async def call_ai_endpoint(request: AIRequest):
     prompt_file_map = {
-        "initial_solution": "step1_initial_solution_prompt.txt",
-        "self_improve_solution": "step2_self_improvement_prompt.txt",
-        "verify": "step3_verification_prompt.txt",
-        "correct_solution": "step_correct_solution_prompt.txt",
-        "generate_python_solution": "generate_python_solution_prompt.txt",
-        "analyze_python_result": "analyze_python_result_prompt.txt",
-        "fix_python_code": "fix_python_code_prompt.txt",
-        "fix_latex_code": "fix_latex_code_prompt.txt",
-        "review_and_synthesis": "step5_review_and_synthesis_prompt.txt",
-        "generate_latex_report": "generate_latex_report_prompt.txt"
+        "initial_solution": ("prompts", "step1_initial_solution_prompt.txt"),
+        "self_improve_solution": ("prompts", "step2_self_improvement_prompt.txt"),
+        "verify": ("prompts", "step3_verification_prompt.txt"),
+        "correct_solution": ("prompts", "step_correct_solution_prompt.txt"),
+        "generate_python_solution": ("prompts", "generate_python_solution_prompt.txt"),
+        "analyze_python_result": ("prompts", "analyze_python_result_prompt.txt"),
+        "fix_python_code": ("prompts", "fix_python_code_prompt.txt"),
+        "fix_latex_code": ("prompts", "fix_latex_code_prompt.txt"),
+        "review_and_synthesis": ("prompts", "step5_review_and_synthesis_prompt.txt"),
+        "generate_latex_report": ("prompts", "generate_latex_report_prompt.txt"),
+        "modeling": ("prompts_applied", "step1_modeling_prompt.txt"),
+        "model_review": ("prompts_applied", "step2_model_review_prompt.txt"),
+        "simulation_script": ("prompts_applied", "step3_simulation_script_prompt.txt"),
+        "synthesis": ("prompts_applied", "step4_synthesis_prompt.txt"),
+        "plot_analysis": ("prompts_applied", "step5_plot_analysis_prompt.txt"),
+        "generate_matlab_script": ("prompts", "generate_matlab_script.txt"),
+        "generate_abaqus_script": ("prompts", "generate_abaqus_script.txt"),
+        "parse_solver_output": ("prompts", "parse_solver_output.txt"),
+        "optimize_parameters": ("prompts", "optimize_parameters_prompt.txt"),
     }
     
-    prompt_filename = prompt_file_map.get(request.task)
-    if not prompt_filename:
+    prompt_info = prompt_file_map.get(request.task)
+    if not prompt_info:
         raise HTTPException(status_code=400, detail=f"Invalid task type: {request.task}")
 
+    base_folder, prompt_filename = prompt_info
     prompt_data = {k: v for k, v in request.data.items() if v is not None}
-    prompt = load_prompt(prompt_filename, prompt_data)
+    if request.parameters:
+        prompt_data['parameters'] = str(request.parameters)
+    prompt = load_prompt(prompt_filename, prompt_data, base_folder=base_folder)
     
     response_text = await call_ai_provider(request.provider, request.model, prompt)
     return {"response": response_text}
 
 
-@app.post("/api/execute-python", response_model=CodeExecutionResult)
-async def execute_python(request: ExecuteRequest):
-    output_io = io.StringIO()
-    error_io = io.StringIO()
-    image_b64 = None
-    
-    safe_globals = {
-        "np": np, "sp": sp, "sympy": sp, "scipy": scipy, "plt": plt,
-        "__builtins__": __builtins__
-    }
-    
-    try:
-        with redirect_stdout(output_io), redirect_stderr(error_io):
-            exec(request.code, safe_globals)
-
-        if plt.get_fignums():
-            buf = io.BytesIO()
-            plt.savefig(buf, format='png')
-            buf.seek(0)
-            image_b64 = base64.b64encode(buf.read()).decode('utf-8')
-            plt.close('all')
-
-        output = output_io.getvalue()
-        error = error_io.getvalue()
-        
-        return CodeExecutionResult(success=not error, output=output, error=error, image=image_b64)
-    except Exception as e:
-        error = error_io.getvalue() + str(e) + "\n" + traceback.format_exc()
-        return CodeExecutionResult(success=False, output=output_io.getvalue(), error=error, image=None)
 
 @app.post("/api/generate-latex-report")
 async def generate_latex_report(request: LatexReportRequest):
@@ -255,6 +330,233 @@ async def generate_latex_report(request: LatexReportRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate LaTeX report: {str(e)}\n{traceback.format_exc()}")
 
+
+from fastapi import UploadFile, File
+from .workflow import run_engineering_workflow
+from .optimization_workflow import run_optimization_workflow
+from .knowledge import knowledge_base_instance
+
+class WorkflowRequest(BaseModel):
+    provider: str
+    model: str
+    problem: str
+    parameters: Dict[str, Any]
+    solver_preference: str
+
+class OptimizationRequest(BaseModel):
+    provider: str
+    model: str
+    problem: str
+    initial_parameters: Dict[str, Any]
+    solver_preference: str
+    optimization_goal: str
+    max_iterations: int = 5
+
+@app.post("/api/upload-data")
+async def upload_data(file: UploadFile = File(...)):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as temp_file:
+        temp_file.write(await file.read())
+        return {"filepath": temp_file.name}
+
+@app.post("/api/knowledge/process")
+async def process_knowledge(file: UploadFile = File(...)):
+    """
+    Processes an uploaded knowledge file, chunks it, and adds it to the knowledge base.
+    """
+    try:
+        content = await file.read()
+        text = content.decode('utf-8')
+        knowledge_base_instance.add_document(text)
+        return {"status": "success", "filename": file.filename, "chunks_added": len(knowledge_base_instance.chunks)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to process knowledge file: {str(e)}")
+
+class StepModelRequest(BaseModel):
+    provider: str
+    model: str
+    problem: str
+    parameters: Dict[str, Any]
+    knowledge_base: Optional[str] = None
+    # No revision needed here as the 'problem' field is the editable content
+
+class StepGenerateScriptRequest(BaseModel):
+    provider: str
+    model: str
+    modeling_result: str
+    parameters: Dict[str, Any]
+    knowledge_base: Optional[str] = None
+    revised_content: Optional[str] = None
+
+class StepExecuteRequest(BaseModel):
+    script: str
+    parameters: Dict[str, Any]
+    data_filepath: Optional[str] = None
+
+class StepSynthesizeRequest(BaseModel):
+    provider: str
+    model: str
+    history: Dict[str, Any]
+    knowledge_base: Optional[str] = None
+
+
+def process_citations(text: str, knowledge_base: str) -> (str, list):
+    """
+    Processes the AI's response to replace [source] markers with citation spans
+    and extracts the cited sources from the knowledge base.
+    """
+    if not knowledge_base:
+        return text, []
+
+    # Split knowledge base into sentences for matching
+    knowledge_sentences = re.split(r'(?<=[.!?])\s+', knowledge_base)
+
+    citations = []
+    processed_text = text
+
+    # Find all sentences ending with the [source] marker
+    # The regex looks for a sentence ending with punctuation, optional whitespace, and then the marker.
+    source_pattern = r'([^.!?]*[.!?])(\s*\[source\])'
+
+    matches = list(re.finditer(source_pattern, text, re.IGNORECASE))
+
+    # Reverse matches to not mess up indices when replacing
+    for i, match in enumerate(reversed(matches)):
+        cited_sentence_ai = match.group(1).strip()
+
+        # Find the best matching sentence in the knowledge base
+        # This is a simple substring search. More advanced methods could be used.
+        best_match = None
+        highest_similarity = 0.0
+
+        for kb_sentence in knowledge_sentences:
+            # Simple similarity check
+            if cited_sentence_ai.lower() in kb_sentence.lower():
+                similarity = len(cited_sentence_ai) / len(kb_sentence)
+                if similarity > highest_similarity:
+                    highest_similarity = similarity
+                    best_match = kb_sentence
+
+        source_text = best_match if best_match else "Source not found in knowledge base."
+
+        # Add to citations list if not already present
+        if source_text not in [c['text'] for c in citations]:
+            citations.append({"id": len(citations) + 1, "text": source_text})
+
+        citation_index = next((c['id'] for c in citations if c['text'] == source_text), 0)
+
+        # Replace the [source] marker with a span
+        replacement_html = f'<span class="citation" data-source-index="{citation_index}">{citation_index}</span>'
+
+        # Replace the specific match in the text
+        start, end = match.span(2)
+        processed_text = processed_text[:start] + replacement_html + processed_text[end:]
+
+    return processed_text, citations
+
+
+@app.post("/api/step/model")
+async def step_model(request: StepModelRequest):
+    """
+    Handles the modeling step, now with RAG.
+    """
+    relevant_chunks = knowledge_base_instance.get_relevant_chunks(request.problem)
+    knowledge_section = f"**Background Knowledge:**\n---\n{''.join(relevant_chunks)}\n---\n" if relevant_chunks else ""
+
+    modeling_prompt = f"{knowledge_section}**Your Task:**\nProblem: {request.problem}\nParameters: {json.dumps(request.parameters)}"
+
+    # AI generates the model
+    modeling_result_raw = await call_ai_provider(request.provider, request.model, modeling_prompt)
+    modeling_result, citations1 = process_citations(modeling_result_raw, "\n".join(relevant_chunks))
+
+    # AI reviews its own generated model
+    review_prompt = f"{knowledge_section}**Your Task:**\nReview the following modeling result:\n{modeling_result}"
+    ai_review_raw = await call_ai_provider(request.provider, request.model, review_prompt)
+    ai_review, citations2 = process_citations(ai_review_raw, "\n".join(relevant_chunks))
+
+    return {"computational_result": modeling_result, "ai_review": ai_review, "citations": citations1 + citations2}
+
+@app.post("/api/step/generate-script")
+async def step_generate_script(request: StepGenerateScriptRequest):
+    """
+    Handles the script generation step, now with RAG.
+    """
+    query = request.modeling_result
+    relevant_chunks = knowledge_base_instance.get_relevant_chunks(query)
+    knowledge_section = f"**Background Knowledge:**\n---\n{''.join(relevant_chunks)}\n---\n" if relevant_chunks else ""
+
+    # If user provides revised content, use it. Otherwise, generate from AI.
+    if request.revised_content:
+        simulation_script = request.revised_content
+    else:
+        script_prompt = f"{knowledge_section}**Your Task:**\nBased on the modeling result, generate a simulation script.\nModeling Result:\n{request.modeling_result}\nParameters: {json.dumps(request.parameters)}"
+        simulation_script = await call_ai_provider(request.provider, request.model, script_prompt)
+
+    # AI always reviews the script that is being passed to the next step
+    review_prompt = f"{knowledge_section}**Your Task:**\nReview the following generated script:\n```python\n{simulation_script}\n```"
+    ai_review_raw = await call_ai_provider(request.provider, request.model, review_prompt)
+    ai_review, citations = process_citations(ai_review_raw, "\n".join(relevant_chunks))
+
+
+    return {"computational_result": simulation_script, "ai_review": ai_review, "citations": citations}
+
+@app.post("/api/step/execute")
+async def step_execute(request: StepExecuteRequest):
+    from agents import PythonAgent
+    agent = PythonAgent()
+    execution_result = agent.run(request.script, request.parameters, request.data_filepath)
+
+    if not execution_result.success:
+        raise AppError(
+            error_code=ErrorCodes.PYTHON_EXECUTION_ERROR,
+            message=f"Python execution failed: {execution_result.error}",
+            suggestion="The Python script failed to execute. Check the script for errors and try again."
+        )
+
+    # This is a placeholder for AI review of the execution
+    ai_review = "AI analysis of the execution result would go here."
+
+    return {
+        "computational_result": {
+            "output": execution_result.output,
+            "image": execution_result.image,
+        },
+        "ai_review": ai_review,
+    }
+
+@app.post("/api/step/synthesize")
+async def step_synthesize(request: StepSynthesizeRequest):
+    query = json.dumps(request.history)
+    relevant_chunks = knowledge_base_instance.get_relevant_chunks(query)
+    knowledge_section = f"**Background Knowledge:**\n---\n{''.join(relevant_chunks)}\n---\n" if relevant_chunks else ""
+    synthesis_prompt = f"{knowledge_section}**Your Task:**\nSynthesize a final report based on the following history:\n{json.dumps(request.history, indent=2)}"
+    synthesis_report_raw = await call_ai_provider(request.provider, request.model, synthesis_prompt)
+    synthesis_report, citations = process_citations(synthesis_report_raw, "\n".join(relevant_chunks))
+    return {"synthesis_report": synthesis_report, "citations": citations}
+
+
+@app.post("/api/run-workflow", deprecated=True)
+async def run_workflow_endpoint(request: WorkflowRequest, data_filepath: str = None):
+    return await run_engineering_workflow(
+        request.provider,
+        request.model,
+        request.problem,
+        request.parameters,
+        request.solver_preference,
+        data_filepath,
+    )
+
+@app.post("/api/run-optimization")
+async def run_optimization_endpoint(request: OptimizationRequest, data_filepath: str = None):
+    return await run_optimization_workflow(
+        request.provider,
+        request.model,
+        request.problem,
+        request.initial_parameters,
+        request.solver_preference,
+        request.optimization_goal,
+        request.max_iterations,
+        data_filepath,
+    )
 
 if __name__ == "__main__":
     import uvicorn

@@ -76,5 +76,154 @@ window.app.api = {
             console.error("LaTeX report generation failed:", error);
             throw error;
         }
+    },
+
+    stepModel: async function(provider, model, problem, parameters) {
+        const url = `${this.BASE_URL}/api/step/model`;
+        const requestBody = { provider, model, problem, parameters };
+        return this.post(url, requestBody);
+    },
+
+    stepGenerateScript: async function(provider, model, modeling_result, parameters, knowledgeBase, revised_content = null) {
+        const url = `${this.BASE_URL}/api/step/generate-script`;
+        const requestBody = { provider, model, modeling_result, parameters, knowledge_base: knowledgeBase, revised_content: revised_content };
+        return this.post(url, requestBody);
+    },
+
+    stepExecute: async function(script, parameters, data_filepath) {
+        const url = `${this.BASE_URL}/api/step/execute`;
+        const requestBody = { script, parameters, data_filepath };
+        return this.post(url, requestBody);
+    },
+
+    stepSynthesize: async function(provider, model, history) {
+        const url = `${this.BASE_URL}/api/step/synthesize`;
+        const requestBody = { provider, model, history };
+        return this.post(url, requestBody);
+    },
+
+    post: async function(url, body) {
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            if (!response.ok) {
+                // Try to parse the structured error, but have a fallback
+                try {
+                    const errorData = await response.json();
+                    // Create an error object that includes the structured data
+                    const error = new Error(errorData.message || 'API request failed');
+                    error.isAppError = true;
+                    error.errorData = errorData;
+                    throw error;
+                } catch (e) {
+                    // If parsing fails, throw a generic error
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
+            }
+            return await response.json();
+        } catch (error) {
+            console.error(`API call to ${url} failed:`, error);
+            // Re-throw the error so the calling function can handle it
+            throw error;
+        }
+    },
+
+    uploadData: async function(file) {
+        const url = `${this.BASE_URL}/api/upload-data`;
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `File upload failed: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("File upload failed:", error);
+            throw error;
+        }
+    },
+
+    processKnowledge: async function(file) {
+        const url = `${this.BASE_URL}/api/knowledge/process`;
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `Knowledge file processing failed: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Knowledge file processing failed:", error);
+            throw error;
+        }
+    },
+
+    uploadKnowledge: async function(file) {
+        const url = `${this.BASE_URL}/api/knowledge/upload`;
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `Knowledge file upload failed: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Knowledge file upload failed:", error);
+            throw error;
+        }
+    },
+
+    runOptimization: async function(problem, parameters, solver, filePath, optimizationGoal) {
+        const url = `${this.BASE_URL}/api/run-optimization`;
+        const requestBody = {
+            provider: window.app.state.systemState.aiConfig.provider,
+            model: window.app.state.systemState.aiConfig.model,
+            problem: problem,
+            parameters: parameters,
+            solver_preference: solver,
+            file_path: filePath,
+            optimization_goal: optimizationGoal
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.detail || `Optimization failed: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("Optimization execution failed:", error);
+            throw error;
+        }
     }
 };

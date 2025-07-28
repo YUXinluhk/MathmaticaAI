@@ -151,6 +151,36 @@ pre {
     overflow-x: auto;
 }
 
+/* --- Citations & Tooltips --- */
+.citation {
+    display: inline-block;
+    background-color: #e0e0e0;
+    color: #333;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    vertical-align: super;
+    margin: 0 2px;
+}
+
+.citation-tooltip {
+    position: absolute;
+    background-color: #333;
+    color: white;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    z-index: 1010;
+    max-width: 400px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
 /* --- Control Panel --- */
 .config-section, .save-section {
     background: #fff;
@@ -272,6 +302,75 @@ pre {
     border-radius: 4px;
 }
 
+/* --- Loading Overlay --- */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.spinner {
+    border: 8px solid #f3f3f3;
+    border-top: 8px solid #3498db;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* --- Disabled Buttons --- */
+.solve-btn:disabled, .approve-btn:disabled, .resubmit-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* --- Code Block Copy Button --- */
+pre {
+    position: relative;
+}
+
+.copy-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* --- Results Section Distinction --- */
+#result-step-model .result-content {
+    background-color: #f0f8ff;
+}
+
+#result-step-generate-script .result-content {
+    background-color: #f5f5f5;
+}
+
+#result-step-execute .result-content {
+    background-color: #e6f7ff;
+}
+
+#result-step-synthesize .result-content {
+    background-color: #fffbe6;
+}
+
 /* --- Notifications --- */
 .notification {
     position: fixed;
@@ -288,3 +387,16 @@ pre {
 .notification.error { background-color: #dc3545; }
 .notification.warning { background-color: #ffc107; color: #333; }
 .notification.info { background-color: #17a2b8; }
+
+.notification-close-btn {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: inherit;
+    cursor: pointer;
+    padding: 5px;
+    line-height: 1;
+}

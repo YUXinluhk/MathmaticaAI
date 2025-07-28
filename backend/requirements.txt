@@ -7,3 +7,8 @@ sympy
 scipy
 matplotlib
 google-generativeai
+pytest
+pytest-mock
+httpx
+python-multipart
+sentence-transformers

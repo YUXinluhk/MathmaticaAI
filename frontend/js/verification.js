@@ -12,7 +12,7 @@ import { extractPythonCode } from './utils.js';
 
 // --- Main Verification Workflow ---
 
-export async function startRigorousVerification() {
+export async function startRigorousVerification(problem, parameters) {
     // ... (Initialization logic)
 
     // --- Main Loop ---
