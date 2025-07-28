@@ -180,6 +180,7 @@ async def call_ai_endpoint(request: AIRequest):
         "generate_matlab_script": ("prompts", "generate_matlab_script.txt"),
         "generate_abaqus_script": ("prompts", "generate_abaqus_script.txt"),
         "parse_solver_output": ("prompts", "parse_solver_output.txt"),
+        "optimize_parameters": ("prompts", "optimize_parameters_prompt.txt"),
     }
     
     prompt_info = prompt_file_map.get(request.task)
@@ -241,6 +242,7 @@ async def generate_latex_report(request: LatexReportRequest):
 
 from fastapi import UploadFile, File
 from workflow import run_engineering_workflow
+from optimization_workflow import run_optimization_workflow
 
 class WorkflowRequest(BaseModel):
     provider: str
@@ -248,6 +250,15 @@ class WorkflowRequest(BaseModel):
     problem: str
     parameters: Dict[str, Any]
     solver_preference: str
+
+class OptimizationRequest(BaseModel):
+    provider: str
+    model: str
+    problem: str
+    initial_parameters: Dict[str, Any]
+    solver_preference: str
+    optimization_goal: str
+    max_iterations: int = 5
 
 @app.post("/api/upload-data")
 async def upload_data(file: UploadFile = File(...)):
@@ -263,6 +274,19 @@ async def run_workflow_endpoint(request: WorkflowRequest, data_filepath: str = N
         request.problem,
         request.parameters,
         request.solver_preference,
+        data_filepath,
+    )
+
+@app.post("/api/run-optimization")
+async def run_optimization_endpoint(request: OptimizationRequest, data_filepath: str = None):
+    return await run_optimization_workflow(
+        request.provider,
+        request.model,
+        request.problem,
+        request.initial_parameters,
+        request.solver_preference,
+        request.optimization_goal,
+        request.max_iterations,
         data_filepath,
     )
 

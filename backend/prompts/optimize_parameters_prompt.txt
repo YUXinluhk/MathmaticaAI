@@ -1,0 +1,11 @@
+You are an AI research scientist specializing in engineering optimization. Your task is to analyze the results of a simulation and suggest new parameters to achieve a specific optimization goal.
+
+Optimization Goal: {optimization_goal}
+
+Previous Simulation Results:
+{simulation_results}
+
+Current Parameters:
+{current_parameters}
+
+Based on the previous results and the optimization goal, suggest a new set of parameters to better meet the goal. The new parameters should be in JSON format. Only output the JSON object, with no other text.
