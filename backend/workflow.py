@@ -51,20 +51,23 @@ async def run_engineering_workflow(
     )
 
     # Step 4: Execute Simulation
-    if solver_preference == "python":
-        agent = PythonAgent()
-        execution_result = agent.run(simulation_script, parameters, data_filepath)
-    elif solver_preference == "matlab":
-        agent = MATLABAgent()
-        execution_result = agent.run(simulation_script, parameters)
-    elif solver_preference == "abaqus":
-        agent = AbaqusAgent()
-        # Abaqus script execution might need a file path
-        with open("abaqus_script.py", "w") as f:
-            f.write(simulation_script)
-        execution_result = agent.run("abaqus_script.py", parameters)
-    else:
-        raise HTTPException(status_code=400, detail="Invalid solver preference.")
+    # Force python solver for now
+    agent = PythonAgent()
+    execution_result = agent.run(simulation_script, parameters, data_filepath)
+    # if solver_preference == "python":
+    #     agent = PythonAgent()
+    #     execution_result = agent.run(simulation_script, parameters, data_filepath)
+    # elif solver_preference == "matlab":
+    #     agent = MATLABAgent()
+    #     execution_result = agent.run(simulation_script, parameters)
+    # elif solver_preference == "abaqus":
+    #     agent = AbaqusAgent()
+    #     # Abaqus script execution might need a file path
+    #     with open("abaqus_script.py", "w") as f:
+    #         f.write(simulation_script)
+    #     execution_result = agent.run("abaqus_script.py", parameters)
+    # else:
+    #     raise HTTPException(status_code=400, detail="Invalid solver preference.")
 
     if not execution_result.success:
         raise HTTPException(status_code=400, detail=f"{solver_preference} execution failed: {execution_result.error}")

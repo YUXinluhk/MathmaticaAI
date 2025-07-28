@@ -1,6 +1,20 @@
 // frontend/js/state.js
 window.app = window.app || {};
 window.app.state = {
+    workflow: {
+        currentStep: 'step-model',
+        stepOrder: ['step-model', 'step-generate-script', 'step-execute', 'step-synthesize'],
+        history: {},
+        getNextStep: function(current) {
+            const currentIndex = this.stepOrder.indexOf(current);
+            if (currentIndex < this.stepOrder.length - 1) {
+                return this.stepOrder[currentIndex + 1];
+            }
+            return null;
+        }
+    },
+    sessions: [],
+    activeSessionId: null,
     systemState: {
         aiConfig: {
             provider: 'google',

@@ -15,6 +15,10 @@
         </div>
 
         <div class="main-layout">
+            <div class="sidebar" id="history-sidebar">
+                <h2>📜 历史记录</h2>
+                <div id="history-list"></div>
+            </div>
             <div class="main-content">
                 <!-- Input Section -->
                 <div class="input-section">
@@ -43,37 +47,29 @@
                 <div class="verification-pipeline">
                     <div class="pipeline-title">🔄 建模与仿真流程</div>
                     <div class="verification-steps">
-        <div class="verification-step" id="main-step-1">
-            <div class="step-number">1</div>
-            <div class="step-label">物理建模</div>
-        </div>
-        <div class="verification-step" id="main-step-2">
-            <div class="step-number">2</div>
-            <div class="step-label">模型审查</div>
-        </div>
-        <div class="parallel-steps-container">
-            <div class="verification-step" id="main-step-3">
-                <div class="step-number">3</div>
-                <div class="step-label">生成仿真脚本</div>
-            </div>
-            <div class="verification-step" id="main-step-4">
-                <div class="step-number">4</div>
-                <div class="step-label">执行仿真</div>
-            </div>
-        </div>
-        <div class="verification-step" id="main-step-5">
-            <div class="step-number">5</div>
-            <div class="step-label">结果分析</div>
-        </div>
-        <div class="verification-step" id="main-step-6">
-            <div class="step-number">6</div>
-            <div class="step-label">综合报告</div>
-        </div>
-    </div>
+                        <div class="verification-step active" id="step-model">
+                            <div class="step-number">1</div>
+                            <div class="step-label">物理建模</div>
+                        </div>
+                        <div class="verification-step" id="step-generate-script">
+                            <div class="step-number">2</div>
+                            <div class="step-label">生成仿真脚本</div>
+                        </div>
+                        <div class="verification-step" id="step-execute">
+                            <div class="step-number">3</div>
+                            <div class="step-label">执行仿真</div>
+                        </div>
+                        <div class="verification-step" id="step-synthesize">
+                            <div class="step-number">4</div>
+                            <div class="step-label">综合报告</div>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Results Container -->
-                <div id="results-container"></div>
+                <div id="results-container">
+                    <!-- Step results will be dynamically inserted here -->
+                </div>
             </div>
 
             <div class="control-panel">
@@ -124,53 +120,56 @@
                     <button class="config-btn" id="generate-report-btn" style="background: #6f42c1;">📄 生成LaTeX报告</button>
                 </div>
                 
-                <!-- AI Config -->
-                <div class="config-section">
-                    <div class="config-title">🤖 AI配置</div>
-                    <div class="config-group">
-                        <label for="api-provider">API提供商:</label>
-                        <select id="api-provider">
-                            <option value="deepseek">DeepSeek</option>
-                            <option value="google">Google Gemini</option>
-                            <option value="openai">OpenAI GPT-4</option>
-                        </select>
+                <details class="config-section">
+                    <summary>高级设置</summary>
+                    <!-- AI Config -->
+                    <div class="config-section">
+                        <div class="config-title">🤖 AI配置</div>
+                        <div class="config-group">
+                            <label for="api-provider">API提供商:</label>
+                            <select id="api-provider">
+                                <option value="deepseek">DeepSeek</option>
+                                <option value="google">Google Gemini</option>
+                                <option value="openai">OpenAI GPT-4</option>
+                            </select>
+                        </div>
+                        <div class="config-group">
+                            <label for="model-version">模型版本:</label>
+                            <select id="model-version"></select>
+                        </div>
+                        <div class="config-group" style="display: none;">
+                            <label for="solver-preference">求解器偏好:</label>
+                            <select id="solver-preference">
+                                <option value="python">Python</option>
+                                <option value="matlab">MATLAB</option>
+                                <option value="abaqus">Abaqus</option>
+                            </select>
+                        </div>
+                        <button class="config-btn" id="test-ai-btn">🔗 测试AI连接 <span class="status-indicator status-disconnected" id="ai-connection-status"></span></button>
+                        <button class="config-btn" id="test-connection-btn">🔌 测试后端连接</button>
                     </div>
-                    <div class="config-group">
-                        <label for="model-version">模型版本:</label>
-                        <select id="model-version"></select>
-                    </div>
-                    <div class="config-group">
-                        <label for="solver-preference">求解器偏好:</label>
-                        <select id="solver-preference">
-                            <option value="python">Python</option>
-                            <option value="matlab">MATLAB</option>
-                            <option value="abaqus">Abaqus</option>
-                        </select>
-                    </div>
-                    <button class="config-btn" id="test-ai-btn">🔗 测试AI连接 <span class="status-indicator status-disconnected" id="ai-connection-status"></span></button>
-                    <button class="config-btn" id="test-connection-btn">🔌 测试后端连接</button>
-                </div>
 
-                <!-- Verification Config -->
-                <div class="config-section">
-                    <div class="config-title">⚙️ 验证配置</div>
-                    <div class="config-group">
-                        <label for="max-iterations">最大迭代次数:</label>
-                        <input type="number" id="max-iterations" value="8" min="3" max="15">
+                    <!-- Verification Config -->
+                    <div class="config-section">
+                        <div class="config-title">⚙️ 验证配置</div>
+                        <div class="config-group">
+                            <label for="max-iterations">最大迭代次数:</label>
+                            <input type="number" id="max-iterations" value="8" min="3" max="15">
+                        </div>
+                        <div class="config-group">
+                            <label for="consecutive-passes-config">连续通过要求:</label>
+                            <input type="number" id="consecutive-passes-config" value="3" min="2" max="5">
+                        </div>
+                        <div class="config-group">
+                            <label for="verification-rigor">验证严格度:</label>
+                            <select id="verification-rigor">
+                                <option value="strict">严格 (推荐)</option>
+                                <option value="moderate">适中</option>
+                                <option value="lenient">宽松</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="config-group">
-                        <label for="consecutive-passes-config">连续通过要求:</label>
-                        <input type="number" id="consecutive-passes-config" value="3" min="2" max="5">
-                    </div>
-                    <div class="config-group">
-                        <label for="verification-rigor">验证严格度:</label>
-                        <select id="verification-rigor">
-                            <option value="strict">严格 (推荐)</option>
-                            <option value="moderate">适中</option>
-                            <option value="lenient">宽松</option>
-                        </select>
-                    </div>
-                </div>
+                </details>
             </div>
         </div>
     </div>

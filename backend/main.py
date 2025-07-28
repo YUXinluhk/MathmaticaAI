@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 import io
 import base64
+import json
 from contextlib import redirect_stdout, redirect_stderr
 import tempfile
 import shutil
@@ -266,7 +267,78 @@ async def upload_data(file: UploadFile = File(...)):
         temp_file.write(await file.read())
         return {"filepath": temp_file.name}
 
-@app.post("/api/run-workflow")
+class StepModelRequest(BaseModel):
+    provider: str
+    model: str
+    problem: str
+    parameters: Dict[str, Any]
+
+class StepGenerateScriptRequest(BaseModel):
+    provider: str
+    model: str
+    modeling_result: str
+    parameters: Dict[str, Any]
+
+class StepExecuteRequest(BaseModel):
+    script: str
+    parameters: Dict[str, Any]
+    data_filepath: Optional[str] = None
+
+class StepSynthesizeRequest(BaseModel):
+    provider: str
+    model: str
+    history: Dict[str, Any]
+
+
+@app.post("/api/step/model")
+async def step_model(request: StepModelRequest):
+    # This is a simplified version of the first part of the original workflow
+    modeling_prompt = f"Problem: {request.problem}\nParameters: {json.dumps(request.parameters)}"
+    modeling_result = await call_ai_provider(request.provider, request.model, modeling_prompt)
+
+    review_prompt = f"Modeling Result:\n{modeling_result}"
+    ai_review = await call_ai_provider(request.provider, request.model, review_prompt)
+
+    return {"computational_result": modeling_result, "ai_review": ai_review}
+
+@app.post("/api/step/generate-script")
+async def step_generate_script(request: StepGenerateScriptRequest):
+    script_prompt = f"Modeling Result:\n{request.modeling_result}\nParameters: {json.dumps(request.parameters)}"
+    simulation_script = await call_ai_provider(request.provider, request.model, script_prompt)
+
+    review_prompt = f"Generated Script:\n{simulation_script}"
+    ai_review = await call_ai_provider(request.provider, request.model, review_prompt)
+
+    return {"computational_result": simulation_script, "ai_review": ai_review}
+
+@app.post("/api/step/execute")
+async def step_execute(request: StepExecuteRequest):
+    from agents import PythonAgent
+    agent = PythonAgent()
+    execution_result = agent.run(request.script, request.parameters, request.data_filepath)
+
+    if not execution_result.success:
+        raise HTTPException(status_code=400, detail=f"Python execution failed: {execution_result.error}")
+
+    # This is a placeholder for AI review of the execution
+    ai_review = "AI analysis of the execution result would go here."
+
+    return {
+        "computational_result": {
+            "output": execution_result.output,
+            "image": execution_result.image,
+        },
+        "ai_review": ai_review,
+    }
+
+@app.post("/api/step/synthesize")
+async def step_synthesize(request: StepSynthesizeRequest):
+    synthesis_prompt = f"Synthesize a final report based on the following history:\n{json.dumps(request.history, indent=2)}"
+    synthesis_report = await call_ai_provider(request.provider, request.model, synthesis_prompt)
+    return {"synthesis_report": synthesis_report}
+
+
+@app.post("/api/run-workflow", deprecated=True)
 async def run_workflow_endpoint(request: WorkflowRequest, data_filepath: str = None):
     return await run_engineering_workflow(
         request.provider,

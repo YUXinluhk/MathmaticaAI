@@ -94,5 +94,58 @@ window.app.ui = {
             stepElement.classList.remove('active', 'completed', 'failed');
             if (status) stepElement.classList.add(status);
         }
+    },
+
+    createApprovalButtons: function(currentStep) {
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'approval-buttons';
+
+        const approveButton = document.createElement('button');
+        approveButton.className = 'approve-btn';
+        approveButton.textContent = 'Approve & Continue';
+        approveButton.dataset.nextStep = window.app.state.workflow.getNextStep(currentStep);
+
+        const reviseButton = document.createElement('button');
+        reviseButton.className = 'revise-btn';
+        reviseButton.textContent = 'Request Revision';
+
+        buttonContainer.appendChild(reviseButton);
+        buttonContainer.appendChild(approveButton);
+
+        return buttonContainer;
+    },
+
+    updateStepVisualization: function(currentStep) {
+        const steps = document.querySelectorAll('.verification-step');
+        steps.forEach(step => {
+            step.classList.remove('active', 'completed');
+        });
+
+        const stepOrder = window.app.state.workflow.stepOrder;
+        const currentIndex = stepOrder.indexOf(currentStep);
+
+        for (let i = 0; i < currentIndex; i++) {
+            document.getElementById(stepOrder[i]).classList.add('completed');
+        }
+
+        const currentStepElement = document.getElementById(currentStep);
+        if (currentStepElement) {
+            currentStepElement.classList.add('active');
+        }
+    },
+
+    renderHistory: function() {
+        const historyList = document.getElementById('history-list');
+        historyList.innerHTML = '';
+        window.app.state.sessions.forEach(session => {
+            const sessionDiv = document.createElement('div');
+            sessionDiv.className = 'history-item';
+            if (session.id === window.app.state.activeSessionId) {
+                sessionDiv.classList.add('active');
+            }
+            sessionDiv.textContent = session.name;
+            sessionDiv.dataset.sessionId = session.id;
+            historyList.appendChild(sessionDiv);
+        });
     }
 };

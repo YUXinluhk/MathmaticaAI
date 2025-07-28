@@ -8,7 +8,7 @@ This platform aims to revolutionize the engineering workflow by leveraging AI to
 
 - **Natural Language-based Problem Description**: Describe your engineering problem in plain English.
 - **AI-powered Modeling**: The platform automatically generates physical models based on your description.
-- **Multi-Solver Support**: Seamlessly switch between Python, MATLAB, and Abaqus for your simulations.
+- **Python-based Simulations**: The platform leverages the power of Python for running simulations and analyzing results.
 - **Automated Simulation & Analysis**: The platform runs the simulations and provides a detailed analysis of the results.
 - **Optimization Workflow**: Define an optimization goal, and the platform will iteratively adjust parameters to find the optimal solution.
 - **Data Upload**: Upload CSV files with comparative data for more accurate simulations.
@@ -21,7 +21,7 @@ The platform is built with a modern web stack and a powerful backend:
 - **Frontend**: A responsive user interface built with HTML, CSS, and vanilla JavaScript. It communicates with the backend via a RESTful API.
 - **Backend**: A Python-based backend using FastAPI. It orchestrates the entire workflow, from calling the AI models to executing the simulation scripts.
 - **AI Integration**: The platform integrates with various large language models (LLMs) like Google's Gemini, OpenAI's GPT-4, and DeepSeek to understand and solve engineering problems.
-- **Solver Agents**: Specialized agents are responsible for interacting with the different solvers (Python, MATLAB, Abaqus), ensuring that the generated scripts are executed correctly.
+- **Solver Agents**: A specialized agent is responsible for interacting with the Python solver, ensuring that the generated scripts are executed correctly.
 
 ## 🚀 How to Use
 

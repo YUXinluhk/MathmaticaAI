@@ -78,31 +78,44 @@ window.app.api = {
         }
     },
 
-    runWorkflow: async function(problem, parameters, solver, filePath) {
-        const url = `${this.BASE_URL}/api/run-workflow`;
-        const requestBody = {
-            provider: window.app.state.systemState.aiConfig.provider,
-            model: window.app.state.systemState.aiConfig.model,
-            problem: problem,
-            parameters: parameters,
-            solver_preference: solver,
-            file_path: filePath
-        };
+    stepModel: async function(provider, model, problem, parameters) {
+        const url = `${this.BASE_URL}/api/step/model`;
+        const requestBody = { provider, model, problem, parameters };
+        return this.post(url, requestBody);
+    },
 
+    stepGenerateScript: async function(provider, model, modeling_result, parameters) {
+        const url = `${this.BASE_URL}/api/step/generate-script`;
+        const requestBody = { provider, model, modeling_result, parameters };
+        return this.post(url, requestBody);
+    },
+
+    stepExecute: async function(script, parameters, data_filepath) {
+        const url = `${this.BASE_URL}/api/step/execute`;
+        const requestBody = { script, parameters, data_filepath };
+        return this.post(url, requestBody);
+    },
+
+    stepSynthesize: async function(provider, model, history) {
+        const url = `${this.BASE_URL}/api/step/synthesize`;
+        const requestBody = { provider, model, history };
+        return this.post(url, requestBody);
+    },
+
+    post: async function(url, body) {
         try {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody)
+                body: JSON.stringify(body)
             });
-
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.detail || `Workflow failed: ${response.status}`);
+                throw new Error(errorData.detail || `API Error: ${response.status}`);
             }
             return await response.json();
         } catch (error) {
-            console.error("Workflow execution failed:", error);
+            console.error(`API call to ${url} failed:`, error);
             throw error;
         }
     },
