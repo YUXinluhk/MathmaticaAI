@@ -25,14 +25,21 @@ window.app.ui = {
         }
     },
 
-    displayResult: function(title, content, type) {
+    displayResult: function(title, content, type, imageB64 = null) {
         const resultsContainer = document.getElementById('results-container');
         const resultDiv = document.createElement('div');
         resultDiv.className = `result-section ${type}`;
+
         const htmlContent = window.app.utils.markdownToHtml(content);
+        let imageHtml = '';
+        if (imageB64) {
+            imageHtml = `<div class="result-image"><img src="data:image/png;base64,${imageB64}" alt="Generated Plot"></div>`;
+        }
+
         resultDiv.innerHTML = `
             <div class="result-header">${title}</div>
             <div class="result-content">${htmlContent}</div>
+            ${imageHtml}
         `;
         resultsContainer.prepend(resultDiv);
         resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });

@@ -1,0 +1,58 @@
+You are a computational mechanics expert. Your task is to write a Python script to solve the given boundary value problem and visualize the results.
+
+**Instructions:**
+1.  **Symbolic Solution:** Use the `sympy` library to find the symbolic solution of the governing differential equation with the given boundary conditions.
+2.  **Numerical Solution:** Convert the symbolic solution into a numerical function that can be evaluated.
+3.  **Visualization:** Use `numpy` and `matplotlib` to plot the solution. The plot should be clearly labeled with a title, axis labels, and units.
+
+**Example Input:**
+*   Governing Differential Equation: `EI * d^4w/dx^4 = 0`
+*   Boundary Conditions:
+    *   `w(0) = 0`
+    *   `dw/dx(0) = 0`
+    *   `d^2w/dx^2(L) = 0`
+    *   `d^3w/dx^3(L) = -F/(EI)`
+*   Parameters: L=10, E=210e9, I=1e-5, F=1000
+
+**Example Output:**
+```python
+import sympy
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 1. Symbolic Solution
+x = sympy.symbols('x')
+w = sympy.Function('w')(x)
+E, I, L, F = sympy.symbols('E I L F')
+ode = sympy.Eq(E * I * w.diff(x, 4), 0)
+sol = sympy.dsolve(ode, w)
+C1, C2, C3, C4 = sympy.symbols('C1 C2 C3 C4')
+constants = {C1: sol.rhs.args[0].args[0], C2: sol.rhs.args[1].args[0], C3: sol.rhs.args[2].args[0], C4: sol.rhs.args[3].args[0]}
+
+# Apply boundary conditions
+bc1 = sympy.Eq(sol.rhs.subs(x, 0), 0)
+bc2 = sympy.Eq(sol.rhs.diff(x).subs(x, 0), 0)
+bc3 = sympy.Eq(sol.rhs.diff(x, 2).subs(x, L), 0)
+bc4 = sympy.Eq(sol.rhs.diff(x, 3).subs(x, L), -F/(E*I))
+
+# Solve for constants
+solved_constants = sympy.solve([bc1, bc2, bc3, bc4], [C1, C2, C3, C4])
+final_solution = sol.rhs.subs(solved_constants)
+
+# 2. Numerical Solution
+# Substitute numerical values
+final_solution_numerical = final_solution.subs({L: 10, E: 210e9, I: 1e-5, F: 1000})
+w_func = sympy.lambdify(x, final_solution_numerical, 'numpy')
+
+# 3. Visualization
+x_vals = np.linspace(0, 10, 101)
+w_vals = w_func(x_vals)
+
+plt.figure()
+plt.plot(x_vals, w_vals)
+plt.title('Deflection of a Cantilever Beam')
+plt.xlabel('Position along beam (m)')
+plt.ylabel('Deflection (m)')
+plt.grid(True)
+plt.show()
+```

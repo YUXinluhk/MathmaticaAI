@@ -87,13 +87,13 @@ class CodeExecutionResult(BaseModel):
 
 
 # --- Prompt Loading ---
-def load_prompt(filename: str, data: Dict[str, Any]) -> str:
+def load_prompt(filename: str, data: Dict[str, Any], base_folder: str = "prompts") -> str:
     try:
-        with open(os.path.join("prompts", filename), "r", encoding="utf-8") as f:
+        with open(os.path.join(base_folder, filename), "r", encoding="utf-8") as f:
             prompt_template = f.read()
         return prompt_template.format(**data)
     except FileNotFoundError:
-        raise HTTPException(status_code=500, detail=f"Prompt file not found: {filename}")
+        raise HTTPException(status_code=500, detail=f"Prompt file not found: {filename} in {base_folder}")
     except KeyError as e:
         raise HTTPException(status_code=400, detail=f"Missing data for prompt placeholder: {e}")
 
@@ -161,24 +161,29 @@ async def test_connection(request: ConnectionTestRequest):
 @app.post("/api/call-ai")
 async def call_ai_endpoint(request: AIRequest):
     prompt_file_map = {
-        "initial_solution": "step1_initial_solution_prompt.txt",
-        "self_improve_solution": "step2_self_improvement_prompt.txt",
-        "verify": "step3_verification_prompt.txt",
-        "correct_solution": "step_correct_solution_prompt.txt",
-        "generate_python_solution": "generate_python_solution_prompt.txt",
-        "analyze_python_result": "analyze_python_result_prompt.txt",
-        "fix_python_code": "fix_python_code_prompt.txt",
-        "fix_latex_code": "fix_latex_code_prompt.txt",
-        "review_and_synthesis": "step5_review_and_synthesis_prompt.txt",
-        "generate_latex_report": "generate_latex_report_prompt.txt"
+        "initial_solution": ("prompts", "step1_initial_solution_prompt.txt"),
+        "self_improve_solution": ("prompts", "step2_self_improvement_prompt.txt"),
+        "verify": ("prompts", "step3_verification_prompt.txt"),
+        "correct_solution": ("prompts", "step_correct_solution_prompt.txt"),
+        "generate_python_solution": ("prompts", "generate_python_solution_prompt.txt"),
+        "analyze_python_result": ("prompts", "analyze_python_result_prompt.txt"),
+        "fix_python_code": ("prompts", "fix_python_code_prompt.txt"),
+        "fix_latex_code": ("prompts", "fix_latex_code_prompt.txt"),
+        "review_and_synthesis": ("prompts", "step5_review_and_synthesis_prompt.txt"),
+        "generate_latex_report": ("prompts", "generate_latex_report_prompt.txt"),
+        "modeling": ("prompts_applied", "step1_modeling_prompt.txt"),
+        "model_review": ("prompts_applied", "step2_model_review_prompt.txt"),
+        "simulation_script": ("prompts_applied", "step3_simulation_script_prompt.txt"),
+        "synthesis": ("prompts_applied", "step4_synthesis_prompt.txt"),
     }
     
-    prompt_filename = prompt_file_map.get(request.task)
-    if not prompt_filename:
+    prompt_info = prompt_file_map.get(request.task)
+    if not prompt_info:
         raise HTTPException(status_code=400, detail=f"Invalid task type: {request.task}")
 
+    base_folder, prompt_filename = prompt_info
     prompt_data = {k: v for k, v in request.data.items() if v is not None}
-    prompt = load_prompt(prompt_filename, prompt_data)
+    prompt = load_prompt(prompt_filename, prompt_data, base_folder=base_folder)
     
     response_text = await call_ai_provider(request.provider, request.model, prompt)
     return {"response": response_text}
